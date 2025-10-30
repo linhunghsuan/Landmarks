@@ -146,7 +146,7 @@
             height: 100%;
             text-align: center;
             word-break: break-all; /* 強制換行 */
-            font-size: 10px;
+            font-size: 12px;
             font-weight: 600;
             color: #1a202c;
             line-height: 1.2;
@@ -157,7 +157,7 @@
         
         /* 六邊形編號 */
         .hex-turn-number {
-            font-size: 8px;
+            font-size: 16px;
             font-weight: 700;
             fill: #c53030;
             text-anchor: middle;
@@ -377,6 +377,15 @@
             EXIT: 1,
         };
         
+        const HOST_PIECE_NAMES_TC = {
+            TREASURE: "寶藏",
+            WATER: "水源",
+            TRAP: "陷阱",
+            CURSE: "詛咒",
+            AMULET: "護身符",
+            EXIT: "離開",
+        };
+        
         // 六邊形鄰居的座標偏移
         const HEX_DIRECTIONS = [
             { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
@@ -554,6 +563,15 @@
             hexData.turnNumberEl = textEl;
         }
 
+        // 隱藏所有未發現的主持人物件 (切換到玩家階段時使用)
+        function hideAllHostPieces() {
+            for (const hexData of hexGridData.values()) {
+                if (hexData.type === 'HOST' && !hexData.found) {
+                    hexData.polygonEl.setAttribute('class', 'hex-polygon hex-fill-EMPTY');
+                }
+            }
+        }
+
         // --- 畫布控制 (Pan & Zoom) ---
 
         function applyTransform() {
@@ -717,6 +735,8 @@
             gameState = 'SETUP_HOST_WORDS';
             hostWordCounter = 0;
             
+            updateStats(); // 切換統計欄到「玩家」視角
+            
             // 切換 UI
             hostSetupSection.classList.add('hidden');
             playerTurnSection.classList.remove('hidden');
@@ -728,7 +748,17 @@
         // --- 統計更新 ---
         function updateStats() {
             Object.keys(HOST_PIECES_MAX).forEach(type => {
-                statsValues[type].textContent = `${discoveredPiecesCount[type]} / ${HOST_PIECES_MAX[type]}`;
+                let numerator, denominator;
+                if (gameState === 'SETUP_HOST') {
+                    // 主持人階段：顯示 已設定 / 最大值
+                    numerator = hostPiecesCount[type];
+                    denominator = HOST_PIECES_MAX[type];
+                } else { // 'SETUP_HOST_WORDS' or 'PLAYING'
+                    // 玩家階段：顯示 已發現 / 主持人設定總數
+                    numerator = discoveredPiecesCount[type];
+                    denominator = hostPiecesCount[type]; // 總數為主持人實際設定的數量
+                }
+                statsValues[type].textContent = `${numerator} / ${denominator}`;
             });
         }
         
@@ -768,7 +798,7 @@
                     hexData.type = 'EMPTY';
                     hexData.polygonEl.setAttribute('class', 'hex-polygon hex-fill-EMPTY');
                     hexData.pieceType = null;
-                    updateStats();
+                    updateStats(); // 更新統計
                 }
                 
             } else if (gameState === 'SETUP_HOST_WORDS') {
@@ -802,11 +832,11 @@
             hexData.type = 'HOST';
             hexData.pieceType = type;
             hexData.found = false;
-            // 主持人階段放置，顯示為空格
-            hexData.polygonEl.setAttribute('class', 'hex-polygon hex-fill-EMPTY'); 
+            // 主持人階段放置，顯示顏色
+            hexData.polygonEl.setAttribute('class', `hex-polygon hex-fill-HOST-${type}`); 
             
             hostPiecesCount[type]++;
-            // 注意：這裡只更新內部計數，不更新 "發現 / 最大" 統計
+            updateStats(); // 更新統計
             
             hideModal(hostPieceModal);
         });
@@ -856,7 +886,9 @@
             updateCaptainDisplay();
             
             if (hostWordCounter >= 3) {
+                hideAllHostPieces(); // 隱藏所有未發現的物件
                 gameState = 'PLAYING';
+                updateStats(); // 確保統計是最新
                 updateCaptainDisplay(); // 切換到玩家
             }
         }
@@ -945,7 +977,7 @@
             html += `<div class="details">${details}</div>`;
 
             if (discoveredType) {
-                html += `<div class="discovered">!!! 發現了 ${discoveredType} !!!</div>`;
+                html += `<div class="discovered">!!! 發現了【${HOST_PIECE_NAMES_TC[discoveredType]}】!!!</div>`;
             }
             
             entry.innerHTML = html;
@@ -972,4 +1004,5 @@
     </script>
 </body>
 </html>
+
 
