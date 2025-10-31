@@ -2,16 +2,14 @@
 <html lang="zh-Hant">
 
 <head>
-	   
 	<meta charset="UTF-8">
-	   
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-	    <title>六邊形地圖遊戲</title>
-	       
+	<title>六邊形地圖遊戲</title>
+	<!-- 引入 Tailwind CSS -->
 	<script src="https://cdn.tailwindcss.com"></script>
-	       
+	<!-- 引入 Inter 字體 -->
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-	    <style>
+	<style>
 		/* 基本樣式 */
 		body {
 			font-family: 'Inter', sans-serif;
@@ -31,14 +29,18 @@
 			/* 佔滿整個視窗 */
 			box-sizing: border-box;
 			position: relative;
+			/* Padding 將由 JS 動態設定 */
 		}
 
 		/* 畫布容器 */
 		#canvas-container {
 			flex-grow: 1;
 			height: 100%;
+			/* 佔滿 main-content 的高度 */
 			overflow: hidden;
+			/* 關鍵：隱藏 SVG 溢出的部分 */
 			cursor: grab;
+			/* 拖拉手勢 */
 			background-color: #e2e8f0;
 			position: relative;
 			transition: width 0.3s ease;
@@ -51,6 +53,7 @@
 		/* 日誌側邊欄 */
 		#log-sidebar {
 			position: fixed;
+			/* 改為 fixed 以便在畫布之上 */
 			right: 0;
 			width: 300px;
 			background-color: #ffffff;
@@ -60,6 +63,7 @@
 			transition: transform 0.3s ease;
 			display: flex;
 			flex-direction: column;
+			/* top, bottom, height 將由 JS 動態設定 */
 		}
 
 		#log-sidebar.open {
@@ -70,6 +74,7 @@
 			position: absolute;
 			top: 50%;
 			left: -32px;
+			/* 32px 按鈕寬度 */
 			transform: translateY(-50%) rotate(-90deg);
 			transform-origin: bottom left;
 			padding: 4px 12px;
@@ -111,10 +116,12 @@
 			padding: 16px;
 			display: flex;
 			flex-direction: column;
+			/* 改為 column */
 		}
 
 		.log-entry {
 			margin-bottom: 12px;
+			/* 調整為 mb */
 			padding: 10px;
 			background-color: #f8fafc;
 			border-radius: 8px;
@@ -176,6 +183,7 @@
 		/* 六邊形 SVG 樣式 */
 		.hex-polygon {
 			stroke: #4a5568;
+			/* 邊框顏色 */
 			stroke-width: 1;
 			transition: all 0.2s ease;
 			cursor: pointer;
@@ -184,6 +192,7 @@
 		.hex-polygon:hover {
 			stroke-width: 2;
 			stroke: #2b6cb0;
+			/* 懸停時邊框顏色 */
 		}
 
 		/* 六邊形文字 (ForeignObject) */
@@ -195,6 +204,7 @@
 			height: 100%;
 			text-align: center;
 			word-break: break-all;
+			/* 強制換行 */
 			font-size: 10px;
 			font-weight: 600;
 			color: #1a202c;
@@ -220,38 +230,49 @@
 			fill: #f6e05e;
 		}
 
+		/* 黃色-寶藏 */
 		.hex-fill-HOST-WATER {
 			fill: #63b3ed;
 		}
 
+		/* 藍色-水源 */
 		.hex-fill-HOST-TRAP {
 			fill: #f687b3;
 		}
 
+		/* 粉色-陷阱 */
 		.hex-fill-HOST-CURSE {
 			fill: #f56565;
 		}
 
+		/* 紅色-詛咒 */
 		.hex-fill-HOST-AMULET {
 			fill: #68d391;
 		}
 
+		/* 綠色-護身符 */
 		.hex-fill-HOST-EXIT {
 			fill: #a0aec0;
 		}
+
+		/* 灰色-離開 */
 
 		/* 玩家物件顏色 */
 		.hex-fill-PLAYER {
 			fill: #ffffff;
 		}
 
+		/* 白色 */
 		.hex-fill-EMPTY {
 			fill: #cbd5e0;
 		}
 
+		/* 灰色-空格 */
 		.hex-fill-DISCOVERED {
 			opacity: 0.8;
 		}
+
+		/* 已發現的 */
 
 		/* 統計欄位 */
 		#stats-bar {
@@ -260,10 +281,12 @@
 			padding: 8px 16px;
 			box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
 			position: fixed;
+			/* 改為 fixed */
 			bottom: 0;
 			left: 0;
 			right: 0;
 			z-index: 20;
+			/* 提高層級 */
 		}
 
 		/* 選單欄位 */
@@ -277,10 +300,12 @@
 			gap: 12px;
 			align-items: center;
 			position: fixed;
+			/* 改為 fixed */
 			top: 0;
 			left: 0;
 			right: 0;
 			z-index: 20;
+			/* 提高層級 */
 		}
 
 		/* 彈出視窗 */
@@ -307,152 +332,169 @@
 
 <body>
 
-	        <div id="menu">
-		                <button id="reset-button"
+	<!-- 選單區域 (Fixed) -->
+	<div id="menu">
+		<!-- 重製按鈕 -->
+		<button id="reset-button"
 			class="px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition">重製遊戲</button>
-		       
-		                <div class="flex items-center gap-2">
-			            <input type="text" id="player-name-input" placeholder="輸入隊員名稱"
+
+		<!-- 隊員輸入 -->
+		<div class="flex items-center gap-2">
+			<input type="text" id="player-name-input" placeholder="輸入隊員名稱"
 				class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-			            <button id="add-player-button"
+			<button id="add-player-button"
 				class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition">新增隊員</button>
-			        </div>
-		       
-		                <div id="player-list-container" class="flex items-center gap-2">
-			            <span class="font-semibold">隊員:</span>
-			            <div id="player-list" class="flex gap-2"></div>
-			        </div>
+		</div>
 
-		                <div id="host-setup-section" class="flex items-center gap-2 ml-auto">
-			            <span class="font-semibold text-purple-700">主持人設定階段</span>
-			            <button id="host-setup-complete-button"
+		<!-- 玩家列表 -->
+		<div id="player-list-container" class="flex items-center gap-2">
+			<span class="font-semibold">隊員:</span>
+			<div id="player-list" class="flex gap-2"></div>
+		</div>
+
+		<!-- 主持人設定 -->
+		<div id="host-setup-section" class="flex items-center gap-2 ml-auto">
+			<span class="font-semibold text-purple-700">主持人設定階段</span>
+			<button id="host-setup-complete-button"
 				class="px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600 transition">完成初始設定</button>
-			        </div>
-		       
-		                <div id="player-turn-section" class="hidden items-center gap-2 ml-auto">
-			            <span id="turn-status-text" class="font-semibold text-green-700">玩家階段</span>
-			            <span class="font-medium">目前嚮導:</span>
-			            <span id="current-captain-display"
+		</div>
+
+		<!-- 玩家階段 -->
+		<div id="player-turn-section" class="hidden items-center gap-2 ml-auto">
+			<span id="turn-status-text" class="font-semibold text-green-700">玩家階段</span>
+			<span class="font-medium">目前嚮導:</span>
+			<span id="current-captain-display"
 				class="px-3 py-1 bg-yellow-200 text-yellow-800 rounded-full font-bold"></span>
-			        </div>
-		    </div>
+		</div>
+	</div>
 
-	        <div id="main-content">
-		                <div id="canvas-container">
-			                        <svg id="hex-canvas" width="100%" height="100%">
-				                                <g id="hex-group"></g>
-				            </svg>
-			        </div>
+	<!-- 主內容區 -->
+	<div id="main-content">
+		<!-- 畫布容器 -->
+		<div id="canvas-container">
+			<!-- SVG 畫布 -->
+			<svg id="hex-canvas" width="100%" height="100%">
+				<!-- G 元素用於縮放和拖拉 -->
+				<g id="hex-group"></g>
+			</svg>
+		</div>
 
-		                <div id="log-sidebar">
-			            <button id="log-toggle">紀錄</button>
-			            <div id="log-header">
-				                <span>遊戲紀錄</span>
-				                <button id="export-log-button">匯出紀錄</button>
-				            </div>
-			            <div id="log-entries">
-				            </div>
-			            <div id="log-input-area">
-				                <textarea id="log-chat-input" rows="2" placeholder="輸入嚮導筆記..."></textarea>
-				                <button id="log-chat-submit">送出筆記</button>
-				            </div>
-			        </div>
-		    </div>
+		<!-- 日誌側邊欄 -->
+		<div id="log-sidebar">
+			<button id="log-toggle">紀錄</button>
+			<div id="log-header">
+				<span>遊戲紀錄</span>
+				<button id="export-log-button">匯出紀錄</button>
+			</div>
+			<div id="log-entries">
+				<!-- Log entries will be added here by JS -->
+			</div>
+			<div id="log-input-area">
+				<textarea id="log-chat-input" rows="2" placeholder="輸入嚮導筆記..."></textarea>
+				<button id="log-chat-submit">送出筆記</button>
+			</div>
+		</div>
+	</div>
 
 
-	        <div id="stats-bar" class="grid grid-cols-3 md:grid-cols-6 gap-2 text-sm">
-		        <div id="stat-TREASURE" class="p-2 bg-yellow-100 rounded-lg text-center">
-			            <span class="font-semibold">寶藏 (黃)</span>: <span class="stat-value">0 / 4</span>
-			        </div>
-		        <div id="stat-WATER" class="p-2 bg-blue-100 rounded-lg text-center">
-			            <span class="font-semibold">水源 (藍)</span>: <span class="stat-value">0 / 4</span>
-			        </div>
-		        <div id="stat-TRAP" class="p-2 bg-pink-100 rounded-lg text-center">
-			            <span class="font-semibold">陷阱 (粉)</span>: <span class="stat-value">0 / 6</span>
-			        </div>
-		        <div id="stat-CURSE" class="p-2 bg-red-100 rounded-lg text-center">
-			            <span class="font-semibold">詛咒 (紅)</span>: <span class="stat-value">0 / 5</span>
-			        </div>
-		        <div id="stat-AMULET" class="p-2 bg-green-100 rounded-lg text-center">
-			            <span class="font-semibold">護身符 (綠)</span>: <span class="stat-value">0 / 1</span>
-			        </div>
-		        <div id="stat-EXIT" class="p-2 bg-gray-200 rounded-lg text-center">
-			            <span class="font-semibold">離開 (灰)</span>: <span class="stat-value">0 / 1</span>
-			        </div>
-		    </div>
+	<!-- 統計區域 (Fixed) -->
+	<div id="stats-bar" class="grid grid-cols-3 md:grid-cols-6 gap-2 text-sm">
+		<div id="stat-TREASURE" class="p-2 bg-yellow-100 rounded-lg text-center">
+			<span class="font-semibold">寶藏 (黃)</span>: <span class="stat-value">0 / 4</span>
+		</div>
+		<div id="stat-WATER" class="p-2 bg-blue-100 rounded-lg text-center">
+			<span class="font-semibold">水源 (藍)</span>: <span class="stat-value">0 / 4</span>
+		</div>
+		<div id="stat-TRAP" class="p-2 bg-pink-100 rounded-lg text-center">
+			<span class="font-semibold">陷阱 (粉)</span>: <span class="stat-value">0 / 6</span>
+		</div>
+		<div id="stat-CURSE" class="p-2 bg-red-100 rounded-lg text-center">
+			<span class="font-semibold">詛咒 (紅)</span>: <span class="stat-value">0 / 5</span>
+		</div>
+		<div id="stat-AMULET" class="p-2 bg-green-100 rounded-lg text-center">
+			<span class="font-semibold">護身符 (綠)</span>: <span class="stat-value">0 / 1</span>
+		</div>
+		<div id="stat-EXIT" class="p-2 bg-gray-200 rounded-lg text-center">
+			<span class="font-semibold">離開 (灰)</span>: <span class="stat-value">0 / 1</span>
+		</div>
+	</div>
 
-	            <div id="reset-modal" class="modal-overlay hidden">
-		        <div class="modal-content">
-			            <h3 class="text-xl font-semibold mb-4">確認重製</h3>
-			            <p class="mb-6">您確定要重製整個遊戲嗎？</p>
-			            <div class="flex items-center mb-4">
-				                <input type="checkbox" id="keep-names-checkbox"
+	<!-- 彈出視窗 (Modals) -->
+
+	<!-- 1. 重製確認 -->
+	<div id="reset-modal" class="modal-overlay hidden">
+		<div class="modal-content">
+			<h3 class="text-xl font-semibold mb-4">確認重製</h3>
+			<p class="mb-6">您確定要重製整個遊戲嗎？</p>
+			<div class="flex items-center mb-4">
+				<input type="checkbox" id="keep-names-checkbox"
 					class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-				                <label for="keep-names-checkbox" class="ml-2 block text-sm text-gray-900">保留隊員名稱</label>
-				            </div>
-			            <div class="flex justify-end gap-4">
-				                <button id="cancel-reset"
-					class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
-				                <button id="confirm-reset"
-					class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">確認 (YES)</button>
-				            </div>
-			        </div>
-		    </div>
+				<label for="keep-names-checkbox" class="ml-2 block text-sm text-gray-900">保留隊員名稱</label>
+			</div>
+			<div class="flex justify-end gap-4">
+				<button id="cancel-reset" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
+				<button id="confirm-reset" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">確認
+					(YES)</button>
+			</div>
+		</div>
+	</div>
 
-	        <div id="host-setup-modal" class="modal-overlay hidden">
-		        <div class="modal-content">
-			            <h3 class="text-xl font-semibold mb-4">完成設定</h3>
-			            <p class="mb-6">您確定主持人已完成初始設定嗎？<br>接下來將進入「主持人放置起始詞語」階段。</p>
-			            <div class="flex justify-end gap-4">
-				                <button id="cancel-host-setup"
-					class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
-				                <button id="confirm-host-setup"
+	<!-- 2. 主持人完成設定確認 -->
+	<div id="host-setup-modal" class="modal-overlay hidden">
+		<div class="modal-content">
+			<h3 class="text-xl font-semibold mb-4">完成設定</h3>
+			<p class="mb-6">您確定主持人已完成初始設定嗎？<br>接下來將進入「主持人放置起始詞語」階段。</p>
+			<div class="flex justify-end gap-4">
+				<button id="cancel-host-setup" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
+				<button id="confirm-host-setup"
 					class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">確認 (YES)</button>
-				            </div>
-			        </div>
-		    </div>
+			</div>
+		</div>
+	</div>
 
-	        <div id="host-piece-modal" class="modal-overlay hidden">
-		        <div class="modal-content">
-			            <h3 class="text-xl font-semibold mb-4">選擇主持人物件</h3>
-			            <p class="mb-6">請選擇要放置在此六邊形的物件類型：</p>
-			            <div class="grid grid-cols-2 gap-4">
-				                <button data-type="TREASURE"
+	<!-- 3. 主持人選擇物件 -->
+	<div id="host-piece-modal" class="modal-overlay hidden">
+		<div class="modal-content">
+			<h3 class="text-xl font-semibold mb-4">選擇主持人物件</h3>
+			<p class="mb-6">請選擇要放置在此六邊形的物件類型：</p>
+			<div class="grid grid-cols-2 gap-4">
+				<button data-type="TREASURE"
 					class="host-piece-option px-4 py-3 bg-yellow-400 rounded-lg shadow hover:bg-yellow-500">寶藏</button>
-				                <button data-type="WATER"
+				<button data-type="WATER"
 					class="host-piece-option px-4 py-3 bg-blue-400 rounded-lg shadow hover:bg-blue-500">水源</button>
-				                <button data-type="TRAP"
+				<button data-type="TRAP"
 					class="host-piece-option px-4 py-3 bg-pink-400 rounded-lg shadow hover:bg-pink-500">陷阱</button>
-				                <button data-type="CURSE"
+				<button data-type="CURSE"
 					class="host-piece-option px-4 py-3 bg-red-400 rounded-lg shadow hover:bg-red-500">詛咒</button>
-				                <button data-type="AMULET"
+				<button data-type="AMULET"
 					class="host-piece-option px-4 py-3 bg-green-400 rounded-lg shadow hover:bg-green-500">護身符</button>
-				                <button data-type="EXIT"
+				<button data-type="EXIT"
 					class="host-piece-option px-4 py-3 bg-gray-400 rounded-lg shadow hover:bg-gray-500">離開</button>
-				            </div>
-			            <div class="flex justify-end mt-6">
-				                <button id="cancel-host-piece"
-					class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
-				            </div>
-			        </div>
-		    </div>
+			</div>
+			<div class="flex justify-end mt-6">
+				<button id="cancel-host-piece" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
+			</div>
+		</div>
+	</div>
 
-	        <div id="player-piece-modal" class="modal-overlay hidden">
-		        <div class="modal-content">
-			            <h3 id="player-modal-title" class="text-xl font-semibold mb-4">放置物件</h3>
-			            <p class="mb-4">請輸入此六邊形的提示詞 (最多20字)：</p>
-			            <input type="text" id="player-text-input" maxlength="20"
+	<!-- 4. 玩家(和主持人)輸入文字 -->
+	<div id="player-piece-modal" class="modal-overlay hidden">
+		<div class="modal-content">
+			<h3 id="player-modal-title" class="text-xl font-semibold mb-4">放置物件</h3>
+			<p class="mb-4">請輸入此六邊形的提示詞 (最多20字)：</p>
+			<input type="text" id="player-text-input" maxlength="20"
 				class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-			            <div class="flex justify-end gap-4 mt-6">
-				                <button id="cancel-player-piece"
-					class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
-				                <button id="confirm-player-piece"
+			<div class="flex justify-end gap-4 mt-6">
+				<button id="cancel-player-piece" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
+				<button id="confirm-player-piece"
 					class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">確認放置</button>
-				            </div>
-			        </div>
-		    </div>
+			</div>
+		</div>
+	</div>
 
-	       
+	<!-- (移除 5. 發現物件確認) -->
+
+	<!-- 遊戲邏輯 -->
 	<script type="module">
 		// --- 遊戲設定 ---
 		const GRID_RADIUS = 3;
