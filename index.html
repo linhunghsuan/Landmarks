@@ -362,7 +362,7 @@
 		<!-- 玩家階段 -->
 		<div id="player-turn-section" class="hidden items-center gap-2 ml-auto">
 			<span id="turn-status-text" class="font-semibold text-green-700">玩家階段</span>
-			<span class="font-medium">目前嚮導:</span>
+			<span class="font-medium">目前隊長:</span>
 			<span id="current-captain-display"
 				class="px-3 py-1 bg-yellow-200 text-yellow-800 rounded-full font-bold"></span>
 		</div>
@@ -390,7 +390,7 @@
 				<!-- Log entries will be added here by JS -->
 			</div>
 			<div id="log-input-area">
-				<textarea id="log-chat-input" rows="2" placeholder="輸入嚮導筆記..."></textarea>
+				<textarea id="log-chat-input" rows="2" placeholder="輸入隊長筆記..."></textarea>
 				<button id="log-chat-submit">送出筆記</button>
 			</div>
 		</div>
@@ -1134,8 +1134,8 @@
 			let speaker, turnNum, details, discoveredText;
 
 			if (speakerRole === 'CHAT') {
-				speaker = players[currentCaptainIndex]?.name || '嚮導';
-				details = "(嚮導筆記)";
+				speaker = players[currentCaptainIndex]?.name || '隊長';
+				details = "(隊長筆記)";
 			} else if (speakerRole === 'HOST') {
 				speaker = '主持人';
 				details = "起始詞語";
@@ -1195,7 +1195,7 @@
 				const details = entry.querySelector('.details')?.innerText || '';
 				const discovered = entry.querySelector('.discovered')?.innerText || '';
 
-				logText += `嚮導: ${speaker}\n`;
+				logText += `隊長: ${speaker}\n`;
 				logText += `詞語: ${content}\n`;
 				logText += `資訊: ${details}\n`;
 				if (discovered) {
