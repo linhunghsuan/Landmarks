@@ -1,1236 +1,1144 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>六邊形地圖遊戲</title>
-    <!-- 引入 Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 Inter 字體 -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-    <style>
-        /* 基本樣式 */
-        body {
-            font-family: 'Inter', sans-serif;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            margin: 0;
-            overflow: hidden; /* 防止滾動 */
-            background-color: #f0f4f8;
-        }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>六邊形地圖遊戲</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+        /* 基本樣式 */
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden; /* 防止滾動 */
+            background-color: #f0f4f8;
+        }
 
-        /* 主內容區 */
-        #main-content {
-            display: flex;
-            height: 100vh; /* 佔滿整個視窗 */
-            box-sizing: border-box;
-            position: relative;
-            /* Padding 將由 JS 動態設定 */
-        }
+        /* 主內容區 */
+        #main-content {
+            display: flex;
+            height: 100vh; /* 佔滿整個視窗 */
+            box-sizing: border-box;
+            position: relative;
+        }
 
-        /* 畫布容器 */
-        #canvas-container {
-            flex-grow: 1;
-            height: 100%; /* 佔滿 main-content 的高度 */
-            overflow: hidden; /* 關鍵：隱藏 SVG 溢出的部分 */
-            cursor: grab; /* 拖拉手勢 */
-            background-color: #e2e8f0;
-            position: relative;
-            transition: width 0.3s ease;
-        }
-        #canvas-container:active {
-            cursor: grabbing;
-        }
+        /* 畫布容器 */
+        #canvas-container {
+            flex-grow: 1;
+            height: 100%;
+            overflow: hidden;
+            cursor: grab;
+            background-color: #e2e8f0;
+            position: relative;
+            transition: width 0.3s ease;
+        }
+        #canvas-container:active {
+            cursor: grabbing;
+        }
 
-        /* 日誌側邊欄 */
-        #log-sidebar {
-            position: fixed; /* 改為 fixed 以便在畫布之上 */
-            right: 0;
-            width: 300px;
-            background-color: #ffffff;
-            box-shadow: -4px 0 12px rgba(0,0,0,0.1);
-            z-index: 20;
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            /* top, bottom, height 將由 JS 動態設定 */
-        }
-        #log-sidebar.open {
-            transform: translateX(0);
-        }
+        /* 日誌側邊欄 */
+        #log-sidebar {
+            position: fixed;
+            right: 0;
+            width: 300px;
+            background-color: #ffffff;
+            box-shadow: -4px 0 12px rgba(0,0,0,0.1);
+            z-index: 20;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        #log-sidebar.open {
+            transform: translateX(0);
+        }
 
-        #log-toggle {
-            position: absolute;
-            top: 50%;
-            left: -32px; /* 32px 按鈕寬度 */
-            transform: translateY(-50%) rotate(-90deg);
-            transform-origin: bottom left;
-            padding: 4px 12px;
-            background-color: #3b82f6;
-            color: white;
-            border: none;
-            border-radius: 8px 8px 0 0;
-            cursor: pointer;
-            font-weight: 600;
-            z-index: 21;
-        }
+        #log-toggle {
+            position: absolute;
+            top: 50%;
+            left: -32px;
+            transform: translateY(-50%) rotate(-90deg);
+            transform-origin: bottom left;
+            padding: 4px 12px;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-weight: 600;
+            z-index: 21;
+        }
 
-        #log-header {
-            padding: 16px;
-            font-size: 1.25rem;
-            font-weight: 700;
-            border-bottom: 1px solid #e2e8f0;
-            flex-shrink: 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        #export-log-button {
-            font-size: 0.8rem;
-            font-weight: 500;
-            padding: 4px 8px;
-            background-color: #e0f2fe;
-            color: #0c4a6e;
-            border: 1px solid #7dd3fc;
-            border-radius: 6px;
-            cursor: pointer;
-            hover:bg-blue-200;
-        }
-        
-        #log-entries {
-            flex-grow: 1;
-            overflow-y: auto;
-            padding: 16px;
-            display: flex;
-            flex-direction: column; /* 改為 column */
-        }
-        
-        .log-entry {
-            margin-bottom: 12px; /* 調整為 mb */
-            padding: 10px;
-            background-color: #f8fafc;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-        }
-        .log-entry .speaker {
-            font-weight: 700;
-            color: #1e40af;
-        }
-        .log-entry .content {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin: 4px 0;
-            color: #1a202c;
-        }
-        .log-entry .details {
-            font-size: 0.8rem;
-            color: #4a5568;
-        }
-        .log-entry .discovered {
-            font-weight: 700;
-            color: #c53030;
-            margin-top: 4px;
-        }
-        
-        #log-input-area {
-            flex-shrink: 0;
-            padding: 12px;
-            border-top: 1px solid #e2e8f0;
-            background-color: #f8fafc;
-        }
-        #log-chat-input {
-            width: 100%;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            padding: 8px;
-            margin-bottom: 8px;
-            box-sizing: border-box;
-        }
-        #log-chat-submit {
-            width: 100%;
-            padding: 8px;
-            background-color: #2563eb;
-            color: white;
-            font-weight: 600;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            hover:bg-blue-700;
-        }
+        #log-header {
+            padding: 16px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            border-bottom: 1px solid #e2e8f0;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #export-log-button {
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 4px 8px;
+            background-color: #e0f2fe;
+            color: #0c4a6e;
+            border: 1px solid #7dd3fc;
+            border-radius: 6px;
+            cursor: pointer;
+            hover:bg-blue-200;
+        }
+        
+        #log-entries {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .log-entry {
+            margin-bottom: 12px;
+            padding: 10px;
+            background-color: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .log-entry .speaker {
+            font-weight: 700;
+            color: #1e40af;
+        }
+        .log-entry .content {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 4px 0;
+            color: #1a202c;
+        }
+        .log-entry .details {
+            font-size: 0.8rem;
+            color: #4a5568;
+        }
+        .log-entry .discovered {
+            font-weight: 700;
+            color: #c53030;
+            margin-top: 4px;
+        }
+        
+        #log-input-area {
+            flex-shrink: 0;
+            padding: 12px;
+            border-top: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+        }
+        #log-chat-input {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+        }
+        #log-chat-submit {
+            width: 100%;
+            padding: 8px;
+            background-color: #2563eb;
+            color: white;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            hover:bg-blue-700;
+        }
 
 
-        /* 六邊形 SVG 樣式 */
-        .hex-polygon {
-            stroke: #4a5568; /* 邊框顏色 */
-            stroke-width: 1;
-            transition: all 0.2s ease;
-            cursor: pointer;
-        }
-        .hex-polygon:hover {
-            stroke-width: 2;
-            stroke: #2b6cb0; /* 懸停時邊框顏色 */
-        }
+        /* 六邊形 SVG 樣式 */
+        .hex-polygon {
+            stroke: #4a5568;
+            stroke-width: 1;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .hex-polygon:hover {
+            stroke-width: 2;
+            stroke: #2b6cb0;
+        }
 
-        /* 六邊形文字 (ForeignObject) */
-        .hex-foreign-object div {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            height: 100%;
-            text-align: center;
-            word-break: break-all; /* 強制換行 */
-            font-size: 10px;
-            font-weight: 600;
-            color: #1a202c;
-            line-height: 1.2;
-            padding: 2px;
-            box-sizing: border-box;
-            pointer-events: none;
-        }
-        
-        /* 六邊形編號 */
-        .hex-turn-number {
-            font-size: 8px;
-            font-weight: 700;
-            fill: #c53030;
-            text-anchor: middle;
-            dominant-baseline: middle;
-            pointer-events: none;
-        }
+        /* 六邊形文字 (ForeignObject) */
+        .hex-foreign-object div {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            word-break: break-all;
+            font-size: 10px;
+            font-weight: 600;
+            color: #1a202c;
+            line-height: 1.2;
+            padding: 2px;
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+        
+        /* 六邊形編號 */
+        .hex-turn-number {
+            font-size: 8px;
+            font-weight: 700;
+            fill: #c53030;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+        }
 
 
-        /* 主持人設定的物件顏色 */
-        .hex-fill-HOST-TREASURE { fill: #f6e05e; } /* 黃色-寶藏 */
-        .hex-fill-HOST-WATER { fill: #63b3ed; } /* 藍色-水源 */
-        .hex-fill-HOST-TRAP { fill: #f687b3; } /* 粉色-陷阱 */
-        .hex-fill-HOST-CURSE { fill: #f56565; } /* 紅色-詛咒 */
-        .hex-fill-HOST-AMULET { fill: #68d391; } /* 綠色-護身符 */
-        .hex-fill-HOST-EXIT { fill: #a0aec0; } /* 灰色-離開 */
-        
-        /* 玩家物件顏色 */
-        .hex-fill-PLAYER { fill: #ffffff; } /* 白色 */
-        .hex-fill-EMPTY { fill: #cbd5e0; } /* 灰色-空格 */
-        .hex-fill-DISCOVERED { opacity: 0.8; } /* 已發現的 */
+        /* 主持人設定的物件顏色 */
+        .hex-fill-HOST-TREASURE { fill: #f6e05e; }
+        .hex-fill-HOST-WATER { fill: #63b3ed; }
+        .hex-fill-HOST-TRAP { fill: #f687b3; }
+        .hex-fill-HOST-CURSE { fill: #f56565; }
+        .hex-fill-HOST-AMULET { fill: #68d391; }
+        .hex-fill-HOST-EXIT { fill: #a0aec0; }
+        
+        /* 玩家物件顏色 */
+        .hex-fill-PLAYER { fill: #ffffff; }
+        .hex-fill-EMPTY { fill: #cbd5e0; }
+        .hex-fill-DISCOVERED { opacity: 0.8; }
 
-        /* 統計欄位 */
-        #stats-bar {
-            flex-shrink: 0;
-            background-color: #ffffff;
-            padding: 8px 16px;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            position: fixed; /* 改為 fixed */
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 20; /* 提高層級 */
-        }
+        /* 統計欄位 */
+        #stats-bar {
+            flex-shrink: 0;
+            background-color: #ffffff;
+            padding: 8px 16px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 20;
+        }
 
-        /* 選單欄位 */
-        #menu {
-            flex-shrink: 0;
-            background-color: #ffffff;
-            padding: 12px 16px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: center;
-            position: fixed; /* 改為 fixed */
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 20; /* 提高層級 */
-        }
+        /* 選單欄位 */
+        #menu {
+            flex-shrink: 0;
+            background-color: #ffffff;
+            padding: 12px 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 20;
+        }
 
-        /* 彈出視窗 */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background-color: rgba(0, 0, 0, 0.6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 50;
-        }
-        .modal-content {
-            background-color: white;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            width: 90%;
-            max-width: 400px;
-        }
-    </style>
+        /* 彈出視窗 */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 400px;
+        }
+    </style>
 </head>
 <body>
 
-    <!-- 選單區域 (Fixed) -->
-    <div id="menu">
-        <!-- 重製按鈕 -->
-        <button id="reset-button" class="px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition">重製遊戲</button>
-        
-        <!-- 隊員輸入 -->
-        <div class="flex items-center gap-2">
-            <input type="text" id="player-name-input" placeholder="輸入隊員名稱" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <button id="add-player-button" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition">新增隊員</button>
-        </div>
-        
-        <!-- 玩家列表 -->
-        <div id="player-list-container" class="flex items-center gap-2">
-            <span class="font-semibold">隊員:</span>
-            <div id="player-list" class="flex gap-2"></div>
-        </div>
-
-        <!-- 主持人設定 -->
-        <div id="host-setup-section" class="flex items-center gap-2 ml-auto">
-            <span class="font-semibold text-purple-700">主持人設定階段</span>
-            <button id="host-setup-complete-button" class="px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600 transition">完成初始設定</button>
-        </div>
-        
-        <!-- 玩家階段 -->
-        <div id="player-turn-section" class="hidden items-center gap-2 ml-auto">
-            <span id="turn-status-text" class="font-semibold text-green-700">玩家階段</span>
-            <span class="font-medium">目前嚮導:</span>
-            <span id="current-captain-display" class="px-3 py-1 bg-yellow-200 text-yellow-800 rounded-full font-bold"></span>
-        </div>
-    </div>
-
-    <!-- 主內容區 -->
-    <div id="main-content">
-        <!-- 畫布容器 -->
-        <div id="canvas-container">
-            <!-- SVG 畫布 -->
-            <svg id="hex-canvas" width="100%" height="100%">
-                <!-- G 元素用於縮放和拖拉 -->
-                <g id="hex-group"></g>
-            </svg>
-        </div>
-
-        <!-- 日誌側邊欄 -->
-        <div id="log-sidebar">
-            <button id="log-toggle">紀錄</button>
-            <div id="log-header">
-                <span>遊戲紀錄</span>
-                <button id="export-log-button">匯出紀錄</button>
-            </div>
-            <div id="log-entries">
-                <!-- Log entries will be added here by JS -->
-            </div>
-            <div id="log-input-area">
-                <textarea id="log-chat-input" rows="2" placeholder="輸入嚮導筆記..."></textarea>
-                <button id="log-chat-submit">送出筆記</button>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- 統計區域 (Fixed) -->
-    <div id="stats-bar" class="grid grid-cols-3 md:grid-cols-6 gap-2 text-sm">
-        <div id="stat-TREASURE" class="p-2 bg-yellow-100 rounded-lg text-center">
-            <span class="font-semibold">寶藏 (黃)</span>: <span class="stat-value">0 / 4</span>
-        </div>
-        <div id="stat-WATER" class="p-2 bg-blue-100 rounded-lg text-center">
-            <span class="font-semibold">水源 (藍)</span>: <span class="stat-value">0 / 4</span>
-        </div>
-        <div id="stat-TRAP" class="p-2 bg-pink-100 rounded-lg text-center">
-            <span class="font-semibold">陷阱 (粉)</span>: <span class="stat-value">0 / 6</span>
-        </div>
-        <div id="stat-CURSE" class="p-2 bg-red-100 rounded-lg text-center">
-            <span class="font-semibold">詛咒 (紅)</span>: <span class="stat-value">0 / 5</span>
-        </div>
-        <div id="stat-AMULET" class="p-2 bg-green-100 rounded-lg text-center">
-            <span class="font-semibold">護身符 (綠)</span>: <span class="stat-value">0 / 1</span>
-        </div>
-        <div id="stat-EXIT" class="p-2 bg-gray-200 rounded-lg text-center">
-            <span class="font-semibold">離開 (灰)</span>: <span class="stat-value">0 / 1</span>
-        </div>
-    </div>
-
-    <!-- 彈出視窗 (Modals) -->
-
-    <!-- 1. 重製確認 -->
-    <div id="reset-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <h3 class="text-xl font-semibold mb-4">確認重製</h3>
-            <p class="mb-6">您確定要重製整個遊戲嗎？</p>
-            <div class="flex items-center mb-4">
-                <input type="checkbox" id="keep-names-checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                <label for="keep-names-checkbox" class="ml-2 block text-sm text-gray-900">保留隊員名稱</label>
-            </div>
-            <div class="flex justify-end gap-4">
-                <button id="cancel-reset" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
-                <button id="confirm-reset" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">確認 (YES)</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 2. 主持人完成設定確認 -->
-    <div id="host-setup-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <h3 class="text-xl font-semibold mb-4">完成設定</h3>
-            <p class="mb-6">您確定主持人已完成初始設定嗎？<br>接下來將進入「主持人放置起始詞語」階段。</p>
-            <div class="flex justify-end gap-4">
-                <button id="cancel-host-setup" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
-                <button id="confirm-host-setup" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">確認 (YES)</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. 主持人選擇物件 -->
-    <div id="host-piece-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <h3 class="text-xl font-semibold mb-4">選擇主持人物件</h3>
-            <p class="mb-6">請選擇要放置在此六邊形的物件類型：</p>
-            <div class="grid grid-cols-2 gap-4">
-                <button data-type="TREASURE" class="host-piece-option px-4 py-3 bg-yellow-400 rounded-lg shadow hover:bg-yellow-500">寶藏</button>
-                <button data-type="WATER" class="host-piece-option px-4 py-3 bg-blue-400 rounded-lg shadow hover:bg-blue-500">水源</button>
-                <button data-type="TRAP" class="host-piece-option px-4 py-3 bg-pink-400 rounded-lg shadow hover:bg-pink-500">陷阱</button>
-                <button data-type="CURSE" class="host-piece-option px-4 py-3 bg-red-400 rounded-lg shadow hover:bg-red-500">詛咒</button>
-                <button data-type="AMULET" class="host-piece-option px-4 py-3 bg-green-400 rounded-lg shadow hover:bg-green-500">護身符</button>
-                <button data-type="EXIT" class="host-piece-option px-4 py-3 bg-gray-400 rounded-lg shadow hover:bg-gray-500">離開</button>
-            </div>
-            <div class="flex justify-end mt-6">
-                <button id="cancel-host-piece" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 4. 玩家(和主持人)輸入文字 -->
-    <div id="player-piece-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <h3 id="player-modal-title" class="text-xl font-semibold mb-4">放置物件</h3>
-            <p class="mb-4">請輸入此六邊形的提示詞 (最多20字)：</p>
-            <input type="text" id="player-text-input" maxlength="20" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <div class="flex justify-end gap-4 mt-6">
-                <button id="cancel-player-piece" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
-                <button id="confirm-player-piece" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">確認放置</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- (移除 5. 發現物件確認) -->
-
-    <!-- 遊戲邏輯 -->
-    <script type="module">
-        // --- 遊戲設定 ---
-        const GRID_RADIUS = 3; // 邊長為 4 個六邊形 (半徑 0, 1, 2, 3)
-        const HEX_SIZE = 50; // 六邊形大小 (像素)
-        
-        const HOST_PIECES_MAX = {
-            TREASURE: 4,
-            WATER: 4,
-            TRAP: 6,
-            CURSE: 5,
-            AMULET: 1,
-            EXIT: 1,
-        };
-        
-        const HOST_PIECE_NAMES_TC = {
-            TREASURE: "寶藏",
-            WATER: "水源",
-            TRAP: "陷阱",
-            CURSE: "詛咒",
-            AMULET: "護身符",
-            EXIT: "離開",
-        };
-        
-        // 六邊形鄰居的座標偏移
-        const HEX_DIRECTIONS = [
-            { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
-            { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
-        ];
-
-        // --- 遊戲狀態 (State) ---
-        let gameState = 'SETUP_HOST'; // 'SETUP_HOST', 'SETUP_HOST_WORDS', 'PLAYING'
-        let players = []; // 玩家列表 { name: '名稱' }
-        let startingPlayerIndex = 0;
-        let currentCaptainIndex = 0;
-        let hostWordCounter = 0;
-        let turnCounter = 0;
-        let isLogOpen = false;
-        
-        // 儲存六邊形格子的資料
-        // key: "q,r", value: { q, r, type: 'HOST'|'PLAYER'|'EMPTY', ... }
-        let hexGridData = new Map();
-        
-        // 統計計數
-        let hostPiecesCount = { ...Object.fromEntries(Object.keys(HOST_PIECES_MAX).map(k => [k, 0])) };
-        let discoveredPiecesCount = { ...Object.fromEntries(Object.keys(HOST_PIECES_MAX).map(k => [k, 0])) };
-
-        // 畫布變換 (平移/縮放)
-        let svgTransform = { x: 0, y: 0, scale: 1.0 };
-        let isPanning = false;
-        let isPinching = false;
-        let lastMousePos = { x: 0, y: 0 };
-        let initialPinchDistance = 0;
-        
-        // 暫存目前點擊的六邊形
-        let currentSelectedHex = null; // { q, r }
-
-        // --- DOM 元素 ---
-        const menu = document.getElementById('menu');
-        const statsBar = document.getElementById('stats-bar');
-        const mainContent = document.getElementById('main-content');
-        
-        const svgCanvas = document.getElementById('hex-canvas');
-        const hexGroup = document.getElementById('hex-group');
-        const canvasContainer = document.getElementById('canvas-container');
-        const logSidebar = document.getElementById('log-sidebar');
-        const logToggle = document.getElementById('log-toggle');
-        const logEntries = document.getElementById('log-entries');
-        const exportLogButton = document.getElementById('export-log-button');
-        const logChatInput = document.getElementById('log-chat-input');
-        const logChatSubmit = document.getElementById('log-chat-submit');
-
-        // 選單
-        const resetButton = document.getElementById('reset-button');
-        const playerNameInput = document.getElementById('player-name-input');
-        const addPlayerButton = document.getElementById('add-player-button');
-        const playerList = document.getElementById('player-list');
-        const hostSetupSection = document.getElementById('host-setup-section');
-        const hostSetupCompleteButton = document.getElementById('host-setup-complete-button');
-        const playerTurnSection = document.getElementById('player-turn-section');
-        const currentCaptainDisplay = document.getElementById('current-captain-display');
-        const turnStatusText = document.getElementById('turn-status-text');
-
-        // 統計
-        const statsValues = {};
-        Object.keys(HOST_PIECES_MAX).forEach(type => {
-            statsValues[type] = document.querySelector(`#stat-${type} .stat-value`);
-        });
-
-        // 彈出視窗
-        const resetModal = document.getElementById('reset-modal');
-        const keepNamesCheckbox = document.getElementById('keep-names-checkbox');
-        const hostSetupModal = document.getElementById('host-setup-modal');
-        const hostPieceModal = document.getElementById('host-piece-modal');
-        const playerPieceModal = document.getElementById('player-piece-modal');
-        const playerModalTitle = document.getElementById('player-modal-title');
-        const playerTextInput = document.getElementById('player-text-input');
-
-        // --- 核心邏輯：六邊形座標 (Axial Coordinates) ---
-
-        // 繪製六邊形的 6 個頂點
-        function getHexPoints(centerX, centerY, size) {
-            let points = [];
-            for (let i = 0; i < 6; i++) {
-                const angle_deg = 60 * i;
-                const angle_rad = Math.PI / 180 * angle_deg;
-                points.push(
-                    (centerX + size * Math.cos(angle_rad)).toFixed(2) + ',' +
-                    (centerY + size * Math.sin(angle_rad)).toFixed(2)
-                );
-            }
-            return points.join(' ');
-        }
-
-        // Axial 座標 (q, r) 轉換為像素 (x, y)
-        function hexToPixel(q, r, size) {
-            const x = size * (3/2 * q);
-            const y = size * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r);
-            return { x, y };
-        }
-
-        // 繪製初始網格
-        function drawGrid() {
-            hexGroup.innerHTML = ''; // 清空畫布
-            hexGridData.clear();
-            
-            const { width, height } = canvasContainer.getBoundingClientRect();
-            const centerX = width / 2;
-            const centerY = height / 2;
-
-            // 設置初始視圖
-            svgTransform.x = centerX;
-            svgTransform.y = centerY;
-            applyTransform();
-
-            for (let q = -GRID_RADIUS; q <= GRID_RADIUS; q++) {
-                for (let r = -GRID_RADIUS; r <= GRID_RADIUS; r++) {
-                    const s = -q - r;
-                    if (Math.abs(q) <= GRID_RADIUS && Math.abs(r) <= GRID_RADIUS && Math.abs(s) <= GRID_RADIUS) {
-                        const { x, y } = hexToPixel(q, r, HEX_SIZE);
-                        const points = getHexPoints(0, 0, HEX_SIZE); // 座標在 G 元素中處理
-                        
-                        const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-                        polygon.setAttribute('points', points);
-                        polygon.setAttribute('transform', `translate(${x}, ${y})`);
-                        polygon.setAttribute('class', 'hex-polygon hex-fill-EMPTY');
-                        polygon.dataset.q = q;
-                        polygon.dataset.r = r;
-                        
-                        hexGroup.appendChild(polygon);
-                        
-                        // 儲存格子資料
-                        hexGridData.set(`${q},${r}`, {
-                            q, r,
-                            type: 'EMPTY',
-                            polygonEl: polygon,
-                            textEl: null,
-                            turnNumberEl: null,
-                            text: null,
-                            turn: 0
-                        });
-                    }
-                }
-            }
-        }
-        
-        // 繪製六邊形上的文字 (使用 ForeignObject)
-        function drawHexText(hexData, text) {
-            if (hexData.textEl) {
-                hexData.textEl.remove(); // 移除舊文字
-            }
-            
-            const { x, y } = hexToPixel(hexData.q, hexData.r, HEX_SIZE);
-            const squareSize = HEX_SIZE * 1.5; // 正方形邊長
-
-            const foreignObject = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
-            foreignObject.setAttribute('x', x - squareSize / 2);
-            foreignObject.setAttribute('y', y - squareSize / 2);
-            foreignObject.setAttribute('width', squareSize);
-            foreignObject.setAttribute('height', squareSize);
-            foreignObject.setAttribute('class', 'hex-foreign-object');
-
-            const div = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
-            div.textContent = text;
-            
-            foreignObject.appendChild(div);
-            hexGroup.appendChild(foreignObject);
-            hexData.textEl = foreignObject;
-        }
-
-        // 繪製六邊形上的編號
-        function drawHexTurnNumber(hexData) {
-             if (hexData.turnNumberEl) {
-                hexData.turnNumberEl.remove();
-            }
-            if (!hexData.turn) return; // 沒有編號
-
-            const { x, y } = hexToPixel(hexData.q, hexData.r, HEX_SIZE);
-
-            const textEl = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            // 放在右上角
-            textEl.setAttribute('x', x + HEX_SIZE * 0.6); 
-            textEl.setAttribute('y', y - HEX_SIZE * 0.7);
-            textEl.setAttribute('class', 'hex-turn-number');
-            textEl.textContent = hexData.turn;
-            
-            hexGroup.appendChild(textEl);
-            hexData.turnNumberEl = textEl;
-        }
-
-        // 隱藏所有未發現的主持人物件 (切換到玩家階段時使用)
-        function hideAllHostPieces() {
-            for (const hexData of hexGridData.values()) {
-                if (hexData.type === 'HOST' && !hexData.found) {
-                    hexData.polygonEl.setAttribute('class', 'hex-polygon hex-fill-EMPTY');
-                }
-            }
-        }
-
-        // --- 畫布控制 (Pan & Zoom) ---
-
-        function applyTransform() {
-            hexGroup.setAttribute('transform', 
-                `translate(${svgTransform.x}, ${svgTransform.y}) scale(${svgTransform.scale})`
-            );
-        }
-
-        // 滾輪縮放
-        canvasContainer.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            if (isPinching) return; // 觸控縮放時忽略滾輪
-
-            const scaleAmount = e.deltaY > 0 ? 0.9 : 1.1; // 縮放比例
-            const rect = canvasContainer.getBoundingClientRect();
-            
-            // 以滑鼠為中心縮放
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-
-            svgTransform.x = mouseX - (mouseX - svgTransform.x) * scaleAmount;
-            svgTransform.y = mouseY - (mouseY - svgTransform.y) * scaleAmount;
-            svgTransform.scale *= scaleAmount;
-
-            applyTransform();
-        });
-
-        // 滑鼠拖動
-        canvasContainer.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return; // 只允許左鍵
-            isPanning = true;
-            lastMousePos = { x: e.clientX, y: e.clientY };
-            canvasContainer.style.cursor = 'grabbing';
-        });
-
-        canvasContainer.addEventListener('mousemove', (e) => {
-            if (!isPanning || isPinching) return;
-            const dx = e.clientX - lastMousePos.x;
-            const dy = e.clientY - lastMousePos.y;
-            
-            svgTransform.x += dx;
-            svgTransform.y += dy;
-            lastMousePos = { x: e.clientX, y: e.clientY };
-            
-            applyTransform();
-        });
-
-        canvasContainer.addEventListener('mouseup', () => {
-            isPanning = false;
-            canvasContainer.style.cursor = 'grab';
-        });
-        canvasContainer.addEventListener('mouseleave', () => {
-            isPanning = false;
-            canvasContainer.style.cursor = 'grab';
-        });
-        
-        // --- 觸控支援 (Touch Events) ---
-        
-        // 取得兩指間距離
-        function getTouchDistance(touches) {
-            const t0 = touches[0];
-            const t1 = touches[1];
-            return Math.sqrt(Math.pow(t0.clientX - t1.clientX, 2) + Math.pow(t0.clientY - t1.clientY, 2));
-        }
-
-        // 取得兩指中心點
-        function getTouchCenter(touches) {
-            const t0 = touches[0];
-            const t1 = touches[1];
-            const rect = canvasContainer.getBoundingClientRect();
-            return {
-                x: (t0.clientX + t1.clientX) / 2 - rect.left,
-                y: (t0.clientY + t1.clientY) / 2 - rect.top,
-            };
-        }
-
-        canvasContainer.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (e.touches.length === 2) {
-                // 雙指縮放
-                isPinching = true;
-                isPanning = false; // 停止拖動
-                initialPinchDistance = getTouchDistance(e.touches);
-            } else if (e.touches.length === 1) {
-                // 單指拖動
-                isPinching = false;
-                isPanning = true;
-                lastMousePos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-                canvasContainer.style.cursor = 'grabbing';
-            }
-        }, { passive: false });
-
-        canvasContainer.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            if (isPinching && e.touches.length === 2) {
-                // 雙指縮放
-                const newDistance = getTouchDistance(e.touches);
-                const scaleAmount = newDistance / initialPinchDistance;
-                initialPinchDistance = newDistance; // 更新距離
-                
-                const center = getTouchCenter(e.touches);
-
-                svgTransform.x = center.x - (center.x - svgTransform.x) * scaleAmount;
-                svgTransform.y = center.y - (center.y - svgTransform.y) * scaleAmount;
-                svgTransform.scale *= scaleAmount;
-                
-                applyTransform();
-
-            } else if (isPanning && e.touches.length === 1) {
-                // 單指拖動
-                const dx = e.touches[0].clientX - lastMousePos.x;
-                const dy = e.touches[0].clientY - lastMousePos.y;
-                
-                svgTransform.x += dx;
-                svgTransform.y += dy;
-                lastMousePos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-                
-                applyTransform();
-            }
-        }, { passive: false });
-
-        canvasContainer.addEventListener('touchend', (e) => {
-            if (e.touches.length < 2) {
-                isPinching = false;
-            }
-            if (e.touches.length < 1) {
-                isPanning = false;
-                canvasContainer.style.cursor = 'grab';
-            }
-        });
-
-
-        // --- 選單邏輯 ---
-
-        // 新增隊員
-        addPlayerButton.addEventListener('click', () => {
-            const name = playerNameInput.value.trim();
-            if (name && players.length < 10) { // 最多10個
-                players.push({ name });
-                playerNameInput.value = '';
-                updatePlayerList();
-            }
-        });
-        
-        // 更新玩家列表 UI
-        function updatePlayerList() {
-            playerList.innerHTML = '';
-            players.forEach((player, index) => {
-                const playerTag = document.createElement('span');
-                playerTag.textContent = player.name;
-                playerTag.className = 'px-3 py-1 bg-gray-200 rounded-full cursor-pointer';
-                
-                // 標記起始玩家
-                if (index === startingPlayerIndex) {
-                    playerTag.classList.add('ring-2', 'ring-blue-500');
-                }
-                
-                // 點擊設定為起始玩家
-                playerTag.addEventListener('click', () => {
-                    startingPlayerIndex = index;
-                    currentCaptainIndex = index; // 起始玩家也是第一位嚮導
-                    updatePlayerList();
-                    updateCaptainDisplay();
-                });
-                playerList.appendChild(playerTag);
-            });
-            updateCaptainDisplay();
-        }
-        
-        // 更新嚮導顯示
-        function updateCaptainDisplay() {
-            if (gameState === 'PLAYING') {
-                turnStatusText.textContent = '玩家階段';
-                if (players.length > 0) {
-                    currentCaptainDisplay.textContent = players[currentCaptainIndex].name;
-                } else {
-                    currentCaptainDisplay.textContent = '無隊員';
-                }
-            } else if (gameState === 'SETUP_HOST_WORDS') {
-                turnStatusText.textContent = '主持人階段';
-                currentCaptainDisplay.textContent = `放置起始詞語 (${3 - hostWordCounter}/3)`;
-            }
-        }
-        
-        // 輪替嚮導
-        function rotateCaptain() {
-            if (players.length > 0) {
-                currentCaptainIndex = (currentCaptainIndex + 1) % players.length;
-                updateCaptainDisplay();
-            }
-        }
-
-        // --- 遊戲流程控制 ---
-
-        // 1. 重製
-        resetButton.addEventListener('click', () => showModal(resetModal));
-        document.getElementById('cancel-reset').addEventListener('click', () => hideModal(resetModal));
-        document.getElementById('confirm-reset').addEventListener('click', () => {
-            const keepNames = keepNamesCheckbox.checked;
-            hideModal(resetModal);
-            
-            // 初始化狀態
-            gameState = 'SETUP_HOST';
-            if (!keepNames) {
-                players = [];
-                startingPlayerIndex = 0;
-            }
-            currentCaptainIndex = startingPlayerIndex;
-            hostWordCounter = 0;
-            turnCounter = 0;
-            
-            hostPiecesCount = { ...Object.fromEntries(Object.keys(HOST_PIECES_MAX).map(k => [k, 0])) };
-            discoveredPiecesCount = { ...Object.fromEntries(Object.keys(HOST_PIECES_MAX).map(k => [k, 0])) };
-            
-            svgTransform = { x: 0, y: 0, scale: 1.0 };
-            
-            // 重繪
-            drawGrid();
-            updatePlayerList();
-            updateStats();
-            logEntries.innerHTML = '';
-            
-            // 切換 UI
-            hostSetupSection.classList.remove('hidden');
-            hostSetupSection.classList.add('flex');
-            playerTurnSection.classList.add('hidden');
-        });
-
-        // 2. 完成主持人設定
-        hostSetupCompleteButton.addEventListener('click', () => {
-            if (players.length === 0) {
-                // 簡易提示
-                console.warn("請至少新增一位隊員"); 
-                return;
-            }
-            showModal(hostSetupModal);
-        });
-        document.getElementById('cancel-host-setup').addEventListener('click', () => hideModal(hostSetupModal));
-        document.getElementById('confirm-host-setup').addEventListener('click', () => {
-            hideModal(hostSetupModal);
-            gameState = 'SETUP_HOST_WORDS';
-            hostWordCounter = 0;
-            
-            updateStats(); // 切換統計欄到「玩家」視角
-            
-            // 切換 UI
-            hostSetupSection.classList.add('hidden');
-            playerTurnSection.classList.remove('hidden');
-            playerTurnSection.classList.add('flex');
-            
-            updateCaptainDisplay();
-        });
-
-        // --- 統計更新 ---
-        function updateStats() {
-            Object.keys(HOST_PIECES_MAX).forEach(type => {
-                let numerator, denominator;
-                if (gameState === 'SETUP_HOST') {
-                    // 主持人階段：顯示 已設定 / 最大值
-                    numerator = hostPiecesCount[type];
-                    denominator = HOST_PIECES_MAX[type];
-                } else { // 'SETUP_HOST_WORDS' or 'PLAYING'
-                    // 玩家階段：顯示 已發現 / 主持人設定總數
-                    numerator = discoveredPiecesCount[type];
-                    denominator = hostPiecesCount[type]; // 總數為主持人實際設定的數量
-                }
-                statsValues[type].textContent = `${numerator} / ${denominator}`;
-            });
-        }
-        
-        // 更新主持人選擇視窗 (反白)
-        function updateHostPieceModalOptions() {
-            document.querySelectorAll('.host-piece-option').forEach(button => {
-                const type = button.dataset.type;
-                if (hostPiecesCount[type] >= HOST_PIECES_MAX[type]) {
-                    button.disabled = true;
-                    button.classList.add('opacity-50', 'cursor-not-allowed');
-                } else {
-                    button.disabled = false;
-                    button.classList.remove('opacity-50', 'cursor-not-allowed');
-                }
-            });
-        }
-
-        // --- 六邊形點擊事件 ---
-        // 為了防止拖動時觸發點擊，我們需要一個小小的計時器
-        let clickTimeout = null;
-        let isClickAllowed = true;
-
-        hexGroup.addEventListener('click', (e) => {
-            // 只有在 isClickAllowed 為 true 且沒有在縮放時才觸發
-            if (!isClickAllowed || isPinching) return;
-
-            const target = e.target;
-            if (target.tagName !== 'polygon') return;
-            
-            const q = parseInt(target.dataset.q);
-            const r = parseInt(target.dataset.r);
-            currentSelectedHex = { q, r }; // 儲存當前點擊
-            
-            const hexData = hexGridData.get(`${q},${r}`);
-            
-            if (gameState === 'SETUP_HOST') {
-                // 主持人設定階段
-                if (hexData.type === 'EMPTY') {
-                    updateHostPieceModalOptions();
-                    showModal(hostPieceModal);
-                } else if (hexData.type === 'HOST') {
-                    // 允許主持人移除已放置的
-                    hostPiecesCount[hexData.pieceType]--;
-                    hexData.type = 'EMPTY';
-                    hexData.polygonEl.setAttribute('class', 'hex-polygon hex-fill-EMPTY');
-                    hexData.pieceType = null;
-                    updateStats(); // 更新統計
-                }
-                
-            } else if (gameState === 'SETUP_HOST_WORDS') {
-                // 主持人放置起始詞語
-                if (hexData.type === 'PLAYER') return; // 不能覆蓋
-                playerModalTitle.textContent = "放置起始詞語";
-                playerTextInput.value = '';
-                showModal(playerPieceModal);
-                
-            } else if (gameState === 'PLAYING') {
-                // 玩家階段
-                if (hexData.type === 'PLAYER' || hexData.found) return; // 已經有詞語或已發現
-                
-                playerModalTitle.textContent = "放置玩家物件";
-                playerTextInput.value = '';
-                showModal(playerPieceModal);
-            }
-        });
-        
-        // 拖動時禁止點擊
-        canvasContainer.addEventListener('mousemove', () => {
-            if (isPanning) isClickAllowed = false;
-        });
-        canvasContainer.addEventListener('touchmove', () => {
-            if (isPanning) isClickAllowed = false;
-        });
-        canvasContainer.addEventListener('mouseup', () => {
-            // 延遲一下再允許點擊，以區分拖動結束和點擊
-            setTimeout(() => { isClickAllowed = true; }, 10); 
-        });
-        canvasContainer.addEventListener('touchend', () => {
-            setTimeout(() => { isClickAllowed = true; }, 10);
-        });
-
-
-        // --- 彈出視窗事件處理 ---
-
-        // 3. 主持人選擇物件
-        hostPieceModal.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('host-piece-option')) return;
-            
-            const type = e.target.dataset.type;
-            if (e.target.disabled) return;
-            
-            const hexData = hexGridData.get(`${currentSelectedHex.q},${currentSelectedHex.r}`);
-            
-            hexData.type = 'HOST';
-            hexData.pieceType = type;
-            hexData.found = false;
-            // 主持人階段放置，顯示顏色
-            hexData.polygonEl.setAttribute('class', `hex-polygon hex-fill-HOST-${type}`); 
-            
-            hostPiecesCount[type]++;
-            updateStats(); // 更新統計
-            
-            hideModal(hostPieceModal);
-        });
-        document.getElementById('cancel-host-piece').addEventListener('click', () => hideModal(hostPieceModal));
-
-        // 4. 玩家(和主持人)放置物件
-        document.getElementById('cancel-player-piece').addEventListener('click', () => hideModal(playerPieceModal));
-        document.getElementById('confirm-player-piece').addEventListener('click', () => {
-            if (gameState === 'SETUP_HOST_WORDS') {
-                handleHostWordPlacement();
-            } else if (gameState === 'PLAYING') {
-                handlePlayerWordPlacement();
-            }
-        });
-        
-        // 處理主持人放置起始詞語
-        function handleHostWordPlacement() {
-            const text = playerTextInput.value.trim();
-            if (!text) return;
-            
-            const hexData = hexGridData.get(`${currentSelectedHex.q},${currentSelectedHex.r}`);
-            if (hexData.type === 'PLAYER') return; // 避免重複
-            
-            hexData.text = text;
-            let discoveredType = null;
-
-            if (hexData.type === 'HOST') {
-                // 如果踩到主持人物件
-                hexData.found = true;
-                discoveredType = hexData.pieceType;
-                discoveredPiecesCount[discoveredType]++;
-                hexData.polygonEl.setAttribute('class', `hex-polygon hex-fill-HOST-${discoveredType} hex-fill-DISCOVERED`);
-                updateStats();
-            } else {
-                // L
-                hexData.type = 'PLAYER';
-                hexData.polygonEl.setAttribute('class', 'hex-polygon hex-fill-PLAYER');
-            }
-            
-            drawHexText(hexData, text);
-            // 不畫編號
-            
-            addLogEntry('HOST', text, hexData, discoveredType);
-            hideModal(playerPieceModal);
-            
-            hostWordCounter++;
-            updateCaptainDisplay();
-            
-            if (hostWordCounter >= 3) {
-                hideAllHostPieces(); // 隱藏所有未發現的物件
-                gameState = 'PLAYING';
-                updateStats(); // 確保統計是最新
-                updateCaptainDisplay(); // 切換到玩家
-            }
-        }
-        
-        // 處理玩家放置詞語
-        function handlePlayerWordPlacement() {
-            const text = playerTextInput.value.trim();
-            if (!text) return;
-            
-            const hexData = hexGridData.get(`${currentSelectedHex.q},${currentSelectedHex.r}`);
-            if (hexData.type === 'PLAYER' || hexData.found) return; // 避免重複
-            
-            turnCounter++;
-            hexData.text = text;
-            hexData.turn = turnCounter;
-            let discoveredType = null;
-
-            if (hexData.type === 'HOST') {
-                // 踩到主持人物件
-                hexData.found = true;
-                discoveredType = hexData.pieceType;
-                discoveredPiecesCount[discoveredType]++;
-                hexData.polygonEl.setAttribute('class', `hex-polygon hex-fill-HOST-${discoveredType} hex-fill-DISCOVERED`);
-                updateStats();
-            } else {
-                // 只是空格
-                hexData.type = 'PLAYER';
-                hexData.polygonEl.setAttribute('class', 'hex-polygon hex-fill-PLAYER');
-            }
-            
-            drawHexText(hexData, text);
-            drawHexTurnNumber(hexData);
-            
-            addLogEntry('PLAYER', text, hexData, discoveredType);
-            hideModal(playerPieceModal);
-            rotateCaptain(); // 輪替嚮導
-        }
-
-        // --- 日誌系統 ---
-        logToggle.addEventListener('click', () => {
-            isLogOpen = !isLogOpen;
-            logSidebar.classList.toggle('open');
-            // canvasContainer.classList.toggle('log-open');
-        });
-        
-        function getAdjacentHexData(q, r) {
-            let neighbors = [];
-            for (const dir of HEX_DIRECTIONS) {
-                const nq = q + dir.q;
-                const nr = r + dir.r;
-                const key = `${nq},${nr}`;
-                if (hexGridData.has(key)) {
-                    neighbors.push(hexGridData.get(key));
-                }
-            }
-            return neighbors;
-        }
-
-        function addLogEntry(speakerRole, content, hexData, discoveredType) {
-            let speaker, turnNum, details, discoveredText;
-
-            if (speakerRole === 'CHAT') {
-                speaker = players[currentCaptainIndex]?.name || '嚮導';
-                details = "(嚮導筆記)";
-            } else if (speakerRole === 'HOST') {
-                speaker = '主持人';
-                details = "起始詞語";
-            } else { // PLAYER
-                speaker = players[currentCaptainIndex]?.name || '玩家';
-                turnNum = hexData.turn || 0;
-                
-                const neighbors = getAdjacentHexData(hexData.q, hexData.r);
-                const adjacentWords = neighbors
-                    .filter(n => n.text)
-                    .map(n => `"${n.text}"`);
-                
-                details = `順序: <b>#${turnNum}</b> | `;
-                if (adjacentWords.length > 0) {
-                    details += `鄰近: ${adjacentWords.join(', ')}`;
-                } else {
-                    details += `鄰近: 無`;
-                }
-            }
-            
-            if (discoveredType) {
-                discoveredText = `!!! 發現了【${HOST_PIECE_NAMES_TC[discoveredType]}】!!!`;
-            }
-
-            const entry = document.createElement('div');
-            entry.className = 'log-entry';
-            
-            let html = `<div class="speaker">${speaker}</div>`;
-            html += `<div class="content">"${content}"</div>`;
-            html += `<div class="details">${details}</div>`;
-
-            if (discoveredText) {
-                html += `<div class="discovered">${discoveredText}</div>`;
-            }
-            
-            entry.innerHTML = html;
-            logEntries.prepend(entry); // Prepend 讓新訊息在最上面
-        }
-        
-        // 嚮導筆記
-        logChatSubmit.addEventListener('click', () => {
-            const text = logChatInput.value.trim();
-            if (text && (gameState === 'PLAYING' || gameState === 'SETUP_HOST_WORDS')) {
-                addLogEntry('CHAT', text, null, null);
-                logChatInput.value = '';
-            }
-        });
-        
-        // 匯出紀錄
-        exportLogButton.addEventListener('click', () => {
-            let logText = "六邊形地圖遊戲 - 遊戲紀錄\n";
-            logText += "================================\n\n";
-            
-            // 取得所有紀錄，並反轉 (因為 prepend 導致 DOM 順序是反的)
-            const entries = Array.from(logEntries.querySelectorAll('.log-entry')).reverse();
-            
-            entries.forEach(entry => {
-                const speaker = entry.querySelector('.speaker')?.innerText || '';
-                const content = entry.querySelector('.content')?.innerText || '';
-                const details = entry.querySelector('.details')?.innerText || '';
-                const discovered = entry.querySelector('.discovered')?.innerText || '';
-                
-                logText += `嚮導: ${speaker}\n`;
-                logText += `詞語: ${content}\n`;
-                logText += `資訊: ${details}\n`;
-                if (discovered) {
-                    logText += `${discovered}\n`;
-                }
-                logText += "\n--------------------------------\n\n";
-            });
-            
-            const blob = new Blob([logText], { type: 'text/plain;charset=utf-8' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'hex-game-log.txt';
-            link.click();
-            URL.revokeObjectURL(link.href);
-        });
-
-
-        // --- UI 佈局動態調整 ---
-        function resizeUI() {
-            const menuHeight = menu.offsetHeight;
-            const statsHeight = statsBar.offsetHeight;
-            
-            // 調整主內容區的 padding
-            mainContent.style.paddingTop = `${menuHeight}px`;
-            mainContent.style.paddingBottom = `${statsHeight}px`;
-            
-            // 調整側邊欄的位置
-            logSidebar.style.top = `${menuHeight}px`;
-            logSidebar.style.bottom = `${statsHeight}px`;
-            logSidebar.style.height = 'auto'; // 讓 top 和 bottom 決定高度
-        }
-
-        // --- 輔助函式 ---
-        function showModal(modal) {
-            modal.classList.remove('hidden');
-        }
-        function hideModal(modal) {
-            modal.classList.add('hidden');
-        }
-
-        // --- 程式初始化 ---
-        function init() {
-            resizeUI(); // 第一次加載時調整 UI
-            drawGrid();
-            updateStats();
-            updatePlayerList();
-            
-            window.addEventListener('resize', resizeUI); // 視窗改變時調整 UI
-        }
-
-        init(); // 啟動遊戲
-    </script>
+        <div id="menu">
+                <button id="reset-button" class="px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition">重製遊戲</button>
+        
+                <div class="flex items-center gap-2">
+            <input type="text" id="player-name-input" placeholder="輸入隊員名稱" class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button id="add-player-button" class="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition">新增隊員</button>
+        </div>
+        
+                <div id="player-list-container" class="flex items-center gap-2">
+            <span class="font-semibold">隊員:</span>
+            <div id="player-list" class="flex gap-2"></div>
+        </div>
+
+                <div id="host-setup-section" class="flex items-center gap-2 ml-auto">
+            <span class="font-semibold text-purple-700">主持人設定階段</span>
+            <button id="host-setup-complete-button" class="px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600 transition">完成初始設定</button>
+        </div>
+        
+                <div id="player-turn-section" class="hidden items-center gap-2 ml-auto">
+            <span id="turn-status-text" class="font-semibold text-green-700">玩家階段</span>
+            <span class="font-medium">目前嚮導:</span>
+            <span id="current-captain-display" class="px-3 py-1 bg-yellow-200 text-yellow-800 rounded-full font-bold"></span>
+        </div>
+    </div>
+
+        <div id="main-content">
+                <div id="canvas-container">
+                        <svg id="hex-canvas" width="100%" height="100%">
+                                <g id="hex-group"></g>
+            </svg>
+        </div>
+
+                <div id="log-sidebar">
+            <button id="log-toggle">紀錄</button>
+            <div id="log-header">
+                <span>遊戲紀錄</span>
+                <button id="export-log-button">匯出紀錄</button>
+            </div>
+            <div id="log-entries">
+            </div>
+            <div id="log-input-area">
+                <textarea id="log-chat-input" rows="2" placeholder="輸入嚮導筆記..."></textarea>
+                <button id="log-chat-submit">送出筆記</button>
+            </div>
+        </div>
+    </div>
+
+
+        <div id="stats-bar" class="grid grid-cols-3 md:grid-cols-6 gap-2 text-sm">
+        <div id="stat-TREASURE" class="p-2 bg-yellow-100 rounded-lg text-center">
+            <span class="font-semibold">寶藏 (黃)</span>: <span class="stat-value">0 / 4</span>
+        </div>
+        <div id="stat-WATER" class="p-2 bg-blue-100 rounded-lg text-center">
+            <span class="font-semibold">水源 (藍)</span>: <span class="stat-value">0 / 4</span>
+        </div>
+        <div id="stat-TRAP" class="p-2 bg-pink-100 rounded-lg text-center">
+            <span class="font-semibold">陷阱 (粉)</span>: <span class="stat-value">0 / 6</span>
+        </div>
+        <div id="stat-CURSE" class="p-2 bg-red-100 rounded-lg text-center">
+            <span class="font-semibold">詛咒 (紅)</span>: <span class="stat-value">0 / 5</span>
+        </div>
+        <div id="stat-AMULET" class="p-2 bg-green-100 rounded-lg text-center">
+            <span class="font-semibold">護身符 (綠)</span>: <span class="stat-value">0 / 1</span>
+        </div>
+        <div id="stat-EXIT" class="p-2 bg-gray-200 rounded-lg text-center">
+            <span class="font-semibold">離開 (灰)</span>: <span class="stat-value">0 / 1</span>
+        </div>
+    </div>
+
+            <div id="reset-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold mb-4">確認重製</h3>
+            <p class="mb-6">您確定要重製整個遊戲嗎？</p>
+            <div class="flex items-center mb-4">
+                <input type="checkbox" id="keep-names-checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                <label for="keep-names-checkbox" class="ml-2 block text-sm text-gray-900">保留隊員名稱</label>
+            </div>
+            <div class="flex justify-end gap-4">
+                <button id="cancel-reset" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
+                <button id="confirm-reset" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">確認 (YES)</button>
+            </div>
+        </div>
+    </div>
+
+        <div id="host-setup-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold mb-4">完成設定</h3>
+            <p class="mb-6">您確定主持人已完成初始設定嗎？<br>接下來將進入「主持人放置起始詞語」階段。</p>
+            <div class="flex justify-end gap-4">
+                <button id="cancel-host-setup" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
+                <button id="confirm-host-setup" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">確認 (YES)</button>
+            </div>
+        </div>
+    </div>
+
+        <div id="host-piece-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 class="text-xl font-semibold mb-4">選擇主持人物件</h3>
+            <p class="mb-6">請選擇要放置在此六邊形的物件類型：</p>
+            <div class="grid grid-cols-2 gap-4">
+                <button data-type="TREASURE" class="host-piece-option px-4 py-3 bg-yellow-400 rounded-lg shadow hover:bg-yellow-500">寶藏</button>
+                <button data-type="WATER" class="host-piece-option px-4 py-3 bg-blue-400 rounded-lg shadow hover:bg-blue-500">水源</button>
+                <button data-type="TRAP" class="host-piece-option px-4 py-3 bg-pink-400 rounded-lg shadow hover:bg-pink-500">陷阱</button>
+                <button data-type="CURSE" class="host-piece-option px-4 py-3 bg-red-400 rounded-lg shadow hover:bg-red-500">詛咒</button>
+                <button data-type="AMULET" class="host-piece-option px-4 py-3 bg-green-400 rounded-lg shadow hover:bg-green-500">護身符</button>
+                <button data-type="EXIT" class="host-piece-option px-4 py-3 bg-gray-400 rounded-lg shadow hover:bg-gray-500">離開</button>
+            </div>
+            <div class="flex justify-end mt-6">
+                <button id="cancel-host-piece" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
+            </div>
+        </div>
+    </div>
+
+        <div id="player-piece-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 id="player-modal-title" class="text-xl font-semibold mb-4">放置物件</h3>
+            <p class="mb-4">請輸入此六邊形的提示詞 (最多20字)：</p>
+            <input type="text" id="player-text-input" maxlength="20" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div class="flex justify-end gap-4 mt-6">
+                <button id="cancel-player-piece" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
+                <button id="confirm-player-piece" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">確認放置</button>
+            </div>
+        </div>
+    </div>
+
+        <script type="module">
+        // --- 遊戲設定 ---
+        const GRID_RADIUS = 3;
+        const HEX_SIZE = 50;
+        
+        const HOST_PIECES_MAX = {
+            TREASURE: 4,
+            WATER: 4,
+            TRAP: 6,
+            CURSE: 5,
+            AMULET: 1,
+            EXIT: 1,
+        };
+        
+        const HOST_PIECE_NAMES_TC = {
+            TREASURE: "寶藏",
+            WATER: "水源",
+            TRAP: "陷阱",
+            CURSE: "詛咒",
+            AMULET: "護身符",
+            EXIT: "離開",
+        };
+        
+        const HEX_DIRECTIONS = [
+            { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+            { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
+        ];
+
+        // --- 遊戲狀態 (State) ---
+        let gameState = 'SETUP_HOST';
+        let players = [];
+        let startingPlayerIndex = 0;
+        let currentCaptainIndex = 0;
+        let hostWordCounter = 0;
+        let turnCounter = 0;
+        let isLogOpen = false;
+        
+        let hexGridData = new Map();
+        
+        let hostPiecesCount = { ...Object.fromEntries(Object.keys(HOST_PIECES_MAX).map(k => [k, 0])) };
+        let discoveredPiecesCount = { ...Object.fromEntries(Object.keys(HOST_PIECES_MAX).map(k => [k, 0])) };
+
+        let svgTransform = { x: 0, y: 0, scale: 1.0 };
+        let isPanning = false;
+        let isPinching = false;
+        let lastMousePos = { x: 0, y: 0 };
+        let initialPinchDistance = 0;
+        
+        let currentSelectedHex = null;
+
+        // --- DOM 元素 ---
+        const menu = document.getElementById('menu');
+        const statsBar = document.getElementById('stats-bar');
+        const mainContent = document.getElementById('main-content');
+        
+        const svgCanvas = document.getElementById('hex-canvas');
+        const hexGroup = document.getElementById('hex-group');
+        const canvasContainer = document.getElementById('canvas-container');
+        const logSidebar = document.getElementById('log-sidebar');
+        const logToggle = document.getElementById('log-toggle');
+        const logEntries = document.getElementById('log-entries');
+        const exportLogButton = document.getElementById('export-log-button');
+        const logChatInput = document.getElementById('log-chat-input');
+        const logChatSubmit = document.getElementById('log-chat-submit');
+
+        const resetButton = document.getElementById('reset-button');
+        const playerNameInput = document.getElementById('player-name-input');
+        const addPlayerButton = document.getElementById('add-player-button');
+        const playerList = document.getElementById('player-list');
+        const hostSetupSection = document.getElementById('host-setup-section');
+        const hostSetupCompleteButton = document.getElementById('host-setup-complete-button');
+        const playerTurnSection = document.getElementById('player-turn-section');
+        const currentCaptainDisplay = document.getElementById('current-captain-display');
+        const turnStatusText = document.getElementById('turn-status-text');
+
+        const statsValues = {};
+        Object.keys(HOST_PIECES_MAX).forEach(type => {
+            statsValues[type] = document.querySelector(`#stat-${type} .stat-value`);
+        });
+
+        const resetModal = document.getElementById('reset-modal');
+        const keepNamesCheckbox = document.getElementById('keep-names-checkbox');
+        const hostSetupModal = document.getElementById('host-setup-modal');
+        const hostPieceModal = document.getElementById('host-piece-modal');
+        const playerPieceModal = document.getElementById('player-piece-modal');
+        const playerModalTitle = document.getElementById('player-modal-title');
+        const playerTextInput = document.getElementById('player-text-input');
+        
+        // --- 核心邏輯：六邊形座標 (Axial Coordinates) ---
+
+        function getHexPoints(centerX, centerY, size) {
+            let points = [];
+            for (let i = 0; i < 6; i++) {
+                const angle_deg = 60 * i;
+                const angle_rad = Math.PI / 180 * angle_deg;
+                points.push(
+                    (centerX + size * Math.cos(angle_rad)).toFixed(2) + ',' +
+                    (centerY + size * Math.sin(angle_rad)).toFixed(2)
+                );
+            }
+            return points.join(' ');
+        }
+
+        function hexToPixel(q, r, size) {
+            const x = size * (3/2 * q);
+            const y = size * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r);
+            return { x, y };
+        }
+
+        function drawGrid() {
+            hexGroup.innerHTML = '';
+            hexGridData.clear();
+            
+            const { width, height } = canvasContainer.getBoundingClientRect();
+            const centerX = width / 2;
+            const centerY = height / 2;
+
+            svgTransform.x = centerX;
+            svgTransform.y = centerY;
+            applyTransform();
+
+            for (let q = -GRID_RADIUS; q <= GRID_RADIUS; q++) {
+                for (let r = -GRID_RADIUS; r <= GRID_RADIUS; r++) {
+                    const s = -q - r;
+                    if (Math.abs(q) <= GRID_RADIUS && Math.abs(r) <= GRID_RADIUS && Math.abs(s) <= GRID_RADIUS) {
+                        const { x, y } = hexToPixel(q, r, HEX_SIZE);
+                        const points = getHexPoints(0, 0, HEX_SIZE);
+                        
+                        const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+                        polygon.setAttribute('points', points);
+                        polygon.setAttribute('transform', `translate(${x}, ${y})`);
+                        polygon.setAttribute('class', 'hex-polygon hex-fill-EMPTY');
+                        polygon.dataset.q = q;
+                        polygon.dataset.r = r;
+                        
+                        hexGroup.appendChild(polygon);
+                        
+                        hexGridData.set(`${q},${r}`, {
+                            q, r,
+                            type: 'EMPTY',
+                            polygonEl: polygon,
+                            textEl: null,
+                            turnNumberEl: null,
+                            text: null,
+                            turn: 0
+                        });
+                    }
+                }
+            }
+        }
+        
+        function drawHexText(hexData, text) {
+            if (hexData.textEl) {
+                hexData.textEl.remove();
+            }
+            
+            const { x, y } = hexToPixel(hexData.q, hexData.r, HEX_SIZE);
+            const squareSize = HEX_SIZE * 1.5;
+
+            const foreignObject = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+            foreignObject.setAttribute('x', x - squareSize / 2);
+            foreignObject.setAttribute('y', y - squareSize / 2);
+            foreignObject.setAttribute('width', squareSize);
+            foreignObject.setAttribute('height', squareSize);
+            foreignObject.setAttribute('class', 'hex-foreign-object');
+
+            const div = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
+            div.textContent = text;
+            
+            foreignObject.appendChild(div);
+            hexGroup.appendChild(foreignObject);
+            hexData.textEl = foreignObject;
+        }
+
+        function drawHexTurnNumber(hexData) {
+             if (hexData.turnNumberEl) {
+                hexData.turnNumberEl.remove();
+            }
+            if (!hexData.turn) return;
+
+            const { x, y } = hexToPixel(hexData.q, hexData.r, HEX_SIZE);
+
+            const textEl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            textEl.setAttribute('x', x + HEX_SIZE * 0.6); 
+            textEl.setAttribute('y', y - HEX_SIZE * 0.7);
+            textEl.setAttribute('class', 'hex-turn-number');
+            textEl.textContent = hexData.turn;
+            
+            hexGroup.appendChild(textEl);
+            hexData.turnNumberEl = textEl;
+        }
+
+        function hideAllHostPieces() {
+            for (const hexData of hexGridData.values()) {
+                if (hexData.type === 'HOST' && !hexData.found) {
+                    hexData.polygonEl.setAttribute('class', 'hex-polygon hex-fill-EMPTY');
+                }
+            }
+        }
+
+        // --- 畫布控制 (Pan & Zoom) ---
+
+        function applyTransform() {
+            hexGroup.setAttribute('transform', 
+                `translate(${svgTransform.x}, ${svgTransform.y}) scale(${svgTransform.scale})`
+            );
+        }
+
+        canvasContainer.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            if (isPinching) return;
+
+            const scaleAmount = e.deltaY > 0 ? 0.9 : 1.1;
+            const rect = canvasContainer.getBoundingClientRect();
+            
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            svgTransform.x = mouseX - (mouseX - svgTransform.x) * scaleAmount;
+            svgTransform.y = mouseY - (mouseY - svgTransform.y) * scaleAmount;
+            svgTransform.scale *= scaleAmount;
+
+            applyTransform();
+        });
+
+        canvasContainer.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            isPanning = true;
+            lastMousePos = { x: e.clientX, y: e.clientY };
+            canvasContainer.style.cursor = 'grabbing';
+        });
+
+        canvasContainer.addEventListener('mousemove', (e) => {
+            if (!isPanning || isPinching) return;
+            const dx = e.clientX - lastMousePos.x;
+            const dy = e.clientY - lastMousePos.y;
+            
+            svgTransform.x += dx;
+            svgTransform.y += dy;
+            lastMousePos = { x: e.clientX, y: e.clientY };
+            
+            applyTransform();
+        });
+
+        canvasContainer.addEventListener('mouseup', () => {
+            isPanning = false;
+            canvasContainer.style.cursor = 'grab';
+        });
+        canvasContainer.addEventListener('mouseleave', () => {
+            isPanning = false;
+            canvasContainer.style.cursor = 'grab';
+        });
+        
+        // --- 觸控支援 (Touch Events) ---
+        
+        function getTouchDistance(touches) {
+            const t0 = touches[0];
+            const t1 = touches[1];
+            return Math.sqrt(Math.pow(t0.clientX - t1.clientX, 2) + Math.pow(t0.clientY - t1.clientY, 2));
+        }
+
+        function getTouchCenter(touches) {
+            const t0 = touches[0];
+            const t1 = touches[1];
+            const rect = canvasContainer.getBoundingClientRect();
+            return {
+                x: (t0.clientX + t1.clientX) / 2 - rect.left,
+                y: (t0.clientY + t1.clientY) / 2 - rect.top,
+            };
+        }
+
+        canvasContainer.addEventListener('touchstart', (e) => {
+            // e.preventDefault(); // *** 修正：移除此行 ***
+            
+            if (e.touches.length === 2) {
+                isPinching = true;
+                isPanning = false;
+                initialPinchDistance = getTouchDistance(e.touches);
+            } else if (e.touches.length === 1) {
+                isPinching = false;
+                isPanning = true;
+                lastMousePos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                canvasContainer.style.cursor = 'grabbing';
+            }
+        }, { passive: false });
+
+        canvasContainer.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (isPinching && e.touches.length === 2) {
+                const newDistance = getTouchDistance(e.touches);
+                const scaleAmount = newDistance / initialPinchDistance;
+                initialPinchDistance = newDistance;
+                
+                const center = getTouchCenter(e.touches);
+
+                svgTransform.x = center.x - (center.x - svgTransform.x) * scaleAmount;
+                svgTransform.y = center.y - (center.y - svgTransform.y) * scaleAmount;
+                svgTransform.scale *= scaleAmount;
+                
+                applyTransform();
+
+            } else if (isPanning && e.touches.length === 1) {
+                const dx = e.touches[0].clientX - lastMousePos.x;
+                const dy = e.touches[0].clientY - lastMousePos.y;
+                
+                svgTransform.x += dx;
+                svgTransform.y += dy;
+                lastMousePos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                
+                applyTransform();
+            }
+        }, { passive: false });
+
+        canvasContainer.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                isPinching = false;
+            }
+            if (e.touches.length < 1) {
+                isPanning = false;
+                canvasContainer.style.cursor = 'grab';
+            }
+        });
+
+
+        // --- 選單邏輯 ---
+
+        addPlayerButton.addEventListener('click', () => {
+            const name = playerNameInput.value.trim();
+            if (name && players.length < 10) {
+                players.push({ name });
+                playerNameInput.value = '';
+                updatePlayerList();
+            }
+        });
+        
+        function updatePlayerList() {
+            playerList.innerHTML = '';
+            players.forEach((player, index) => {
+                const playerTag = document.createElement('span');
+                playerTag.textContent = player.name;
+                playerTag.className = 'px-3 py-1 bg-gray-200 rounded-full cursor-pointer';
+                
+                if (index === startingPlayerIndex) {
+                    playerTag.classList.add('ring-2', 'ring-blue-500');
+                }
+                
+                playerTag.addEventListener('click', () => {
+                    startingPlayerIndex = index;
+                    currentCaptainIndex = index;
+                    updatePlayerList();
+                    updateCaptainDisplay();
+                });
+                playerList.appendChild(playerTag);
+            });
+            updateCaptainDisplay();
+        }
+        
+        function updateCaptainDisplay() {
+            if (gameState === 'PLAYING') {
+                turnStatusText.textContent = '玩家階段';
+                if (players.length > 0) {
+                    currentCaptainDisplay.textContent = players[currentCaptainIndex].name;
+                } else {
+                    currentCaptainDisplay.textContent = '無隊員';
+                }
+            } else if (gameState === 'SETUP_HOST_WORDS') {
+                turnStatusText.textContent = '主持人階段';
+                currentCaptainDisplay.textContent = `放置起始詞語 (${3 - hostWordCounter}/3)`;
+            }
+        }
+        
+        function rotateCaptain() {
+            if (players.length > 0) {
+                currentCaptainIndex = (currentCaptainIndex + 1) % players.length;
+                updateCaptainDisplay();
+            }
+        }
+
+        // --- 遊戲流程控制 ---
+
+        resetButton.addEventListener('click', () => showModal(resetModal));
+        document.getElementById('cancel-reset').addEventListener('click', () => hideModal(resetModal));
+        document.getElementById('confirm-reset').addEventListener('click', () => {
+            const keepNames = keepNamesCheckbox.checked;
+            hideModal(resetModal);
+            
+            gameState = 'SETUP_HOST';
+            if (!keepNames) {
+                players = [];
+                startingPlayerIndex = 0;
+            }
+            currentCaptainIndex = startingPlayerIndex;
+            hostWordCounter = 0;
+            turnCounter = 0;
+            
+            hostPiecesCount = { ...Object.fromEntries(Object.keys(HOST_PIECES_MAX).map(k => [k, 0])) };
+            discoveredPiecesCount = { ...Object.fromEntries(Object.keys(HOST_PIECES_MAX).map(k => [k, 0])) };
+            
+            svgTransform = { x: 0, y: 0, scale: 1.0 };
+            
+            drawGrid();
+            updatePlayerList();
+            updateStats();
+            logEntries.innerHTML = '';
+            
+            hostSetupSection.classList.remove('hidden');
+            hostSetupSection.classList.add('flex');
+            playerTurnSection.classList.add('hidden');
+        });
+
+        hostSetupCompleteButton.addEventListener('click', () => {
+            if (players.length === 0) {
+                console.warn("請至少新增一位隊員"); 
+                return;
+            }
+            showModal(hostSetupModal);
+        });
+        document.getElementById('cancel-host-setup').addEventListener('click', () => hideModal(hostSetupModal));
+        document.getElementById('confirm-host-setup').addEventListener('click', () => {
+            hideModal(hostSetupModal);
+            gameState = 'SETUP_HOST_WORDS';
+            hostWordCounter = 0;
+            
+            updateStats();
+            
+            hostSetupSection.classList.add('hidden');
+            playerTurnSection.classList.remove('hidden');
+            playerTurnSection.classList.add('flex');
+            
+            updateCaptainDisplay();
+        });
+
+        // --- 統計更新 ---
+        function updateStats() {
+            Object.keys(HOST_PIECES_MAX).forEach(type => {
+                let numerator, denominator;
+                if (gameState === 'SETUP_HOST') {
+                    numerator = hostPiecesCount[type];
+                    denominator = HOST_PIECES_MAX[type];
+                } else {
+                    numerator = discoveredPiecesCount[type];
+                    denominator = hostPiecesCount[type];
+                }
+                statsValues[type].textContent = `${numerator} / ${denominator}`;
+            });
+        }
+        
+        function updateHostPieceModalOptions() {
+            document.querySelectorAll('.host-piece-option').forEach(button => {
+                const type = button.dataset.type;
+                if (hostPiecesCount[type] >= HOST_PIECES_MAX[type]) {
+                    button.disabled = true;
+                    button.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    button.disabled = false;
+                    button.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            });
+        }
+
+        // --- 六邊形點擊事件 ---
+        let clickTimeout = null;
+        let isClickAllowed = true;
+
+        hexGroup.addEventListener('click', (e) => {
+            if (!isClickAllowed || isPinching) return;
+
+            const target = e.target;
+            if (target.tagName !== 'polygon') return;
+            
+            const q = parseInt(target.dataset.q);
+            const r = parseInt(target.dataset.r);
+            currentSelectedHex = { q, r };
+            
+            const hexData = hexGridData.get(`${q},${r}`);
+            
+            if (gameState === 'SETUP_HOST') {
+                if (hexData.type === 'EMPTY') {
+                    updateHostPieceModalOptions();
+                    showModal(hostPieceModal);
+                } else if (hexData.type === 'HOST') {
+                    hostPiecesCount[hexData.pieceType]--;
+                    hexData.type = 'EMPTY';
+                    hexData.polygonEl.setAttribute('class', 'hex-polygon hex-fill-EMPTY');
+                    hexData.pieceType = null;
+                    updateStats();
+                }
+                
+            } else if (gameState === 'SETUP_HOST_WORDS') {
+                if (hexData.type === 'PLAYER') return;
+                playerModalTitle.textContent = "放置起始詞語";
+                playerTextInput.value = '';
+                showModal(playerPieceModal);
+                
+            } else if (gameState === 'PLAYING') {
+                if (hexData.type === 'PLAYER' || hexData.found) return;
+                
+                playerModalTitle.textContent = "放置玩家物件";
+                playerTextInput.value = '';
+                showModal(playerPieceModal);
+            }
+        });
+        
+        canvasContainer.addEventListener('mousemove', () => {
+            if (isPanning) isClickAllowed = false;
+        });
+        canvasContainer.addEventListener('touchmove', () => {
+            if (isPanning) isClickAllowed = false;
+        });
+        canvasContainer.addEventListener('mouseup', () => {
+            setTimeout(() => { isClickAllowed = true; }, 10); 
+        });
+        canvasContainer.addEventListener('touchend', () => {
+            setTimeout(() => { isClickAllowed = true; }, 10);
+        });
+
+
+        // --- 彈出視窗事件處理 ---
+
+        hostPieceModal.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('host-piece-option')) return;
+            
+            const type = e.target.dataset.type;
+            if (e.target.disabled) return;
+            
+            const hexData = hexGridData.get(`${currentSelectedHex.q},${currentSelectedHex.r}`);
+            
+            hexData.type = 'HOST';
+            hexData.pieceType = type;
+            hexData.found = false;
+            hexData.polygonEl.setAttribute('class', `hex-polygon hex-fill-HOST-${type}`); 
+            
+            hostPiecesCount[type]++;
+            updateStats();
+            
+            hideModal(hostPieceModal);
+        });
+        document.getElementById('cancel-host-piece').addEventListener('click', () => hideModal(hostPieceModal));
+
+        document.getElementById('cancel-player-piece').addEventListener('click', () => hideModal(playerPieceModal));
+        document.getElementById('confirm-player-piece').addEventListener('click', () => {
+            if (gameState === 'SETUP_HOST_WORDS') {
+                handleHostWordPlacement();
+            } else if (gameState === 'PLAYING') {
+                handlePlayerWordPlacement();
+            }
+        });
+        
+        function handleHostWordPlacement() {
+            const text = playerTextInput.value.trim();
+            if (!text) return;
+            
+            const hexData = hexGridData.get(`${currentSelectedHex.q},${currentSelectedHex.r}`);
+            if (hexData.type === 'PLAYER') return;
+            
+            hexData.text = text;
+            let discoveredType = null;
+
+            if (hexData.type === 'HOST') {
+                hexData.found = true;
+                discoveredType = hexData.pieceType;
+                discoveredPiecesCount[discoveredType]++;
+                hexData.polygonEl.setAttribute('class', `hex-polygon hex-fill-HOST-${discoveredType} hex-fill-DISCOVERED`);
+                updateStats();
+            } else {
+                hexData.type = 'PLAYER';
+                hexData.polygonEl.setAttribute('class', 'hex-polygon hex-fill-PLAYER');
+            }
+            
+            drawHexText(hexData, text);
+            
+            addLogEntry('HOST', text, hexData, discoveredType);
+            hideModal(playerPieceModal);
+            
+            hostWordCounter++;
+            updateCaptainDisplay();
+            
+            if (hostWordCounter >= 3) {
+                hideAllHostPieces();
+                gameState = 'PLAYING';
+                updateStats();
+                updateCaptainDisplay();
+            }
+        }
+        
+        function handlePlayerWordPlacement() {
+            const text = playerTextInput.value.trim();
+            if (!text) return;
+            
+            const hexData = hexGridData.get(`${currentSelectedHex.q},${currentSelectedHex.r}`);
+            if (hexData.type === 'PLAYER' || hexData.found) return;
+            
+            turnCounter++;
+            hexData.text = text;
+            hexData.turn = turnCounter;
+            let discoveredType = null;
+
+            if (hexData.type === 'HOST') {
+                hexData.found = true;
+                discoveredType = hexData.pieceType;
+                discoveredPiecesCount[discoveredType]++;
+                hexData.polygonEl.setAttribute('class', `hex-polygon hex-fill-HOST-${discoveredType} hex-fill-DISCOVERED`);
+                updateStats();
+            } else {
+                hexData.type = 'PLAYER';
+                hexData.polygonEl.setAttribute('class', 'hex-polygon hex-fill-PLAYER');
+            }
+            
+            drawHexText(hexData, text);
+            drawHexTurnNumber(hexData);
+            
+            addLogEntry('PLAYER', text, hexData, discoveredType);
+            hideModal(playerPieceModal);
+            rotateCaptain();
+        }
+
+        // --- 日誌系統 ---
+        logToggle.addEventListener('click', () => {
+            isLogOpen = !isLogOpen;
+            logSidebar.classList.toggle('open');
+        });
+        
+        function getAdjacentHexData(q, r) {
+            let neighbors = [];
+            for (const dir of HEX_DIRECTIONS) {
+                const nq = q + dir.q;
+                const nr = r + dir.r;
+                const key = `${nq},${nr}`;
+                if (hexGridData.has(key)) {
+                    neighbors.push(hexGridData.get(key));
+                }
+            }
+            return neighbors;
+        }
+
+        function addLogEntry(speakerRole, content, hexData, discoveredType) {
+            let speaker, turnNum, details, discoveredText;
+
+            if (speakerRole === 'CHAT') {
+                speaker = players[currentCaptainIndex]?.name || '嚮導';
+                details = "(嚮導筆記)";
+            } else if (speakerRole === 'HOST') {
+                speaker = '主持人';
+                details = "起始詞語";
+            } else {
+                speaker = players[currentCaptainIndex]?.name || '玩家';
+                turnNum = hexData.turn || 0;
+                
+                const neighbors = getAdjacentHexData(hexData.q, hexData.r);
+                const adjacentWords = neighbors
+                    .filter(n => n.text)
+                    .map(n => `"${n.text}"`);
+                
+                details = `順序: <b>#${turnNum}</b> | `;
+                if (adjacentWords.length > 0) {
+                    details += `鄰近: ${adjacentWords.join(', ')}`;
+                } else {
+                    details += `鄰近: 無`;
+                }
+            }
+            
+            if (discoveredType) {
+                discoveredText = `!!! 發現了【${HOST_PIECE_NAMES_TC[discoveredType]}】!!!`;
+            }
+
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            let html = `<div class="speaker">${speaker}</div>`;
+            html += `<div class="content">"${content}"</div>`;
+            html += `<div class="details">${details}</div>`;
+
+            if (discoveredText) {
+                html += `<div class="discovered">${discoveredText}</div>`;
+            }
+            
+            entry.innerHTML = html;
+            logEntries.prepend(entry);
+        }
+        
+        logChatSubmit.addEventListener('click', () => {
+            const text = logChatInput.value.trim();
+            if (text && (gameState === 'PLAYING' || gameState === 'SETUP_HOST_WORDS')) {
+                addLogEntry('CHAT', text, null, null);
+                logChatInput.value = '';
+            }
+        });
+        
+        exportLogButton.addEventListener('click', () => {
+            let logText = "六邊形地圖遊戲 - 遊戲紀錄\n";
+            logText += "================================\n\n";
+            
+            const entries = Array.from(logEntries.querySelectorAll('.log-entry')).reverse();
+            
+            entries.forEach(entry => {
+                const speaker = entry.querySelector('.speaker')?.innerText || '';
+                const content = entry.querySelector('.content')?.innerText || '';
+                const details = entry.querySelector('.details')?.innerText || '';
+                const discovered = entry.querySelector('.discovered')?.innerText || '';
+                
+                logText += `嚮導: ${speaker}\n`;
+                logText += `詞語: ${content}\n`;
+                logText += `資訊: ${details}\n`;
+                if (discovered) {
+                    logText += `${discovered}\n`;
+                }
+                logText += "\n--------------------------------\n\n";
+            });
+            
+            const blob = new Blob([logText], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'hex-game-log.txt';
+            link.click();
+            URL.revokeObjectURL(link.href);
+s        });
+
+
+        // --- UI 佈局動態調整 ---
+        function resizeUI() {
+            const menuHeight = menu.offsetHeight;
+            const statsHeight = statsBar.offsetHeight;
+            
+            mainContent.style.paddingTop = `${menuHeight}px`;
+            mainContent.style.paddingBottom = `${statsHeight}px`;
+            
+            logSidebar.style.top = `${menuHeight}px`;
+            logSidebar.style.bottom = `${statsHeight}px`;
+            logSidebar.style.height = 'auto';
+        }
+
+        // --- 輔助函式 ---
+        function showModal(modal) {
+            modal.classList.remove('hidden');
+        }
+        function hideModal(modal) {
+            modal.classList.add('hidden');
+        }
+
+        // --- 程式初始化 ---
+        function init() {
+            resizeUI();
+            drawGrid();
+            updateStats();
+            updatePlayerList();
+            
+            window.addEventListener('resize', resizeUI);
+        }
+
+        init();
+    </script>
 </body>
 </html>
